@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-from MSI.mass_spectrum import mass_spectrum
+from MS.mass_spectrum import mass_spectrum
 class ion_datacube():
     # a class for holding a datacube from an MSI dataset and producing ion images
     def __init__(self): # define mandatory parameters (todo- validator to check all present)

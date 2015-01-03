@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-from MSI.mass_spectrum import mass_spectrum
+from MS.mass_spectrum import mass_spectrum
 from MSI.ion_datacube import ion_datacube
 class MSIdataset():
     def __innit__(self):
