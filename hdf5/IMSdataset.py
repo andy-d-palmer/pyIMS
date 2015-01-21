@@ -1,8 +1,8 @@
 import h5py
 import numpy as np
-from py_MS.mass_spectrum import mass_spectrum
-from py_MSI.ion_datacube import ion_datacube
-class MSIdataset():
+from pyMS.mass_spectrum import mass_spectrum
+from pyIMS.ion_datacube import ion_datacube
+class IMSdataset():
     def __innit__(self):
         # create empty list variables
         self.coords = []
