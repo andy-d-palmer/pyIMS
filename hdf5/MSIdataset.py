@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
-from MS.mass_spectrum import mass_spectrum
-from MSI.ion_datacube import ion_datacube
+from py_MS.mass_spectrum import mass_spectrum
+from py_MSI.ion_datacube import ion_datacube
 class MSIdataset():
     def __innit__(self):
         # create empty list variables
@@ -48,6 +48,7 @@ class MSIdataset():
         xic_array = np.zeros((len(self.index_list),len(mz_list)))
         if self.consistent_mz==True:
             this_spectrum = self.get_spectrum(0)
+	    # precalculate which mzs should be made
             mz_index = np.zeros((len(this_spectrum.mzs),len(mz_list)),dtype=bool)
             for mm in range(0,len(mz_list)):
                 mz_index[:,mm] = (this_spectrum.mzs<mz_list_upper[mm]) & (this_spectrum.mzs>mz_list_lower[mm])
