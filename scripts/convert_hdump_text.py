@@ -7,11 +7,6 @@ import copy
 import cPickle
 import gzip
 
-def dump_object(fname, obj):
-    output = open(fname, 'wb')
-    cPickle.dump(obj, output)
-    output.close()
-
 def my_print(s):
     print("[" + str(datetime.datetime.now()) + "] " + s, file=sys.stderr)
 
@@ -82,8 +77,6 @@ for line in f:
 
 f.close()
 
-my_print("Dumping result to %s.pkl..." % sys.argv[1])
-dump_object("%s.pkl" % sys.argv[1], d)
 my_print("All done!")
 
 exit(0)
