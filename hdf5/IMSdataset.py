@@ -47,6 +47,7 @@ class IMSdataset():
         # todo - implement alternative return_method (e.g. max, median sum)
         xic_array = np.zeros((len(self.index_list),len(mz_list)))
         if self.consistent_mz==True:
+            print "consistent"
             this_spectrum = self.get_spectrum(0)
 	    # precalculate which mzs should be made
             mz_index = np.zeros((len(this_spectrum.mzs),len(mz_list)),dtype=bool)
@@ -57,6 +58,7 @@ class IMSdataset():
                 for mm in range(0,len(mz_list)):
                    xic_array[ii,mm] = sum(this_spectrum.intensities[mz_index[:,mm]])
         else:
+            print "inconsistent"
             for ii in self.index_list:
                 this_spectrum = self.get_spectrum(ii)
                 for mm in range(0,len(mz_list)):
