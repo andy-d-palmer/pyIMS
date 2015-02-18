@@ -1,6 +1,6 @@
 # README #
 
-IMS for python
+This repository contains the Python library for processing individual mass spectra.
 
 ### What is this repository for? ###
 
