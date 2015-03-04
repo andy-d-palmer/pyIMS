@@ -15,12 +15,18 @@ class IMSdataset():
         self.hdf = h5py.File(filename,'r')       #Readonly, file must exist
         self.index_list = map(int,self.hdf['/spectral_data'].keys())
         self.coords = self.get_coords()
+	self.mz_min=float("inf")
+	self.mz_max=0
         # check if all spectra are the same length
         spec_length = np.zeros(len(self.index_list))
         for ii in self.index_list:
             this_spectrum = self.get_spectrum(ii)
             tmp_shape = this_spectrum.mzs.shape
             spec_length[ii]=tmp_shape[0]
+	    if this_spectrum.mzs[0]<self.mz_min:
+		self.mz_min=this_spectrum.mzs[0]
+	    if this_spectrum.mzs[-1]>self.mz_max:
+		self.mz_max=this_spectrum.mzs[-1]
         if np.all(spec_length==spec_length[1]):
             self.consistent_mz = True
         else:
