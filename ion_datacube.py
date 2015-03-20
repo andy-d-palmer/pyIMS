@@ -17,8 +17,8 @@ class ion_datacube():
             print len(xic)
             raise ValueError
         self.xic = np.concatenate((self.xic,xic),axis=1)
-        self.mzs = self.mzs.append(mz)
-        self.tol = self.tol.append(tol)
+        self.mzs = np.concatenate((self.mzs,mz))
+        self.tol = np.concatenate((self.tol,tol))
     def remove_xic(self,mz):
         #remove an xic and related info
         index_to_remove = self.mz.index(mz)
