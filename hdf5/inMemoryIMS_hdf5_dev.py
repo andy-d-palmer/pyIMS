@@ -10,7 +10,7 @@ sys.path.append('/Users/palmer/Documents/python_codebase/')
 from pyMS.mass_spectrum import mass_spectrum
 from pyIMS.ion_datacube import ion_datacube
 class inMemoryIMS_hdf5():
-    def __init__(self,filename,min_mz=0,max_mz=np.inf):
+    def __init__(self,filename,min_mz=0,max_mz=np.inf,index_range=[]):
         file_size = os.path.getsize(filename)
         self.load_file(filename,min_mz,max_mz)
         
@@ -20,7 +20,10 @@ class inMemoryIMS_hdf5():
         self.file_dir, self.filename = file_type=os.path.splitext(filename)
         self.file_type = file_type
         self.hdf = h5py.File(filename,'r')   #Readonly, file must exist
-        self.index_list = map(int,self.hdf['/spectral_data'].keys())
+	if index_range == []:
+        	self.index_list = map(int,self.hdf['/spectral_data'].keys())
+	else: 
+		self.index_list = index_range
         self.coords = self.get_coords()
         # load data into memory
         self.mz_list = []

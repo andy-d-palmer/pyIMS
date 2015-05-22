@@ -2,16 +2,14 @@ import h5py
 import numpy as np
 from pyMS.mass_spectrum import mass_spectrum
 from pyIMS.ion_datacube import ion_datacube
+
 class IMSdataset():
-    def __innit__(self):
-        # create empty list variables
-        self.coords = []
-        self.index = [] 
-    def load_file(self,filename,file_type='MSIhdf5'):
+    def __init__(self,filename):
+    	self.file_type='MSIhdf5'
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.filename = filename
-        self.file_type = file_type
+        self.file_type = 'IMS.hdf5'
         self.hdf = h5py.File(filename,'r')       #Readonly, file must exist
         self.index_list = map(int,self.hdf['/spectral_data'].keys())
         self.coords = self.get_coords()
@@ -74,11 +72,19 @@ class IMSdataset():
         data_out.add_coords(self.coords)
         data_out.add_xic(xic_array,mz_list,tol_list)
         return data_out
-    def get_spectrum(self,index):
+    def get_spectrum(self,index,datatype='profile'):
         this_spectrum = mass_spectrum()
         tmp_str='/spectral_data/%d/' %(index) 
-        this_spectrum.add_mzs(self.hdf[tmp_str+'mzs/'])
-        this_spectrum.add_intensities(self.hdf[tmp_str+'/intensities/'])
+	if datatype == 'profile':
+	        this_spectrum.add_spectrum(self.hdf[tmp_str+'mzs/'],self.hdf[tmp_str+'/intensities/'])
+	elif datatype=='centroid':
+	        this_spectrum.add_centroids(self.hdf[tmp_str+'centroid_mzs/'],self.hdf[tmp_str+'/centroid_intensities/'])
+	elif datatype == 'all':
+		if self.hdf[tmp_str+'mzs/']:
+			this_spectrum.add_spectrum(self.hdf[tmp_str+'mzs/'],self.hdf[tmp_str+'/intensities/'])
+		if self.hdf[tmp_str+'centroid_mzs/']:
+	        	this_spectrum.add_centroids(self.hdf[tmp_str+'centroid_mzs/'],self.hdf[tmp_str+'/centroid_intensities/'])
+		
         return this_spectrum
     def coord_to_index(self, coord):
         index = 0
