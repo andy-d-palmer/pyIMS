@@ -1,20 +1,22 @@
-''' Function for calculating a measure of image noise using level sets
-# Inputs: image - numpy array of pixel intensities
-         nlevels - number of levels to calculate over (note that we approximating a continuious distribution with a 'large enough' number of levels)
-# Outputs: measure_value
+import numpy as np
+from scipy import ndimage, misc, ndarray, interpolate
 
-This function calculates the number of connected regions above a threshold at an evenly spaced number of threshold
-between the min and max values of the image.
-
-There is some morphological operations to deal with orphaned pixels and heuristic parameters in the image processing.
-
-# Usage
-img = misc.imread('/Users/palmer/Copy/ion_image.png').astype(float)
-print measure_of_chaos(img,20)
- '''
 def measure_of_chaos(im,nlevels,interp=True,q_val = 99.):
-	import numpy as np
-	from scipy import ndimage, misc, ndarray, interpolate
+	''' Function for calculating a measure of image noise using level sets
+	:param image: numpy array of pixel intensities
+	:param nlevels: number of levels to calculate over (note that we approximating a continuious distribution with a 'large enough' number of levels)
+
+	Outputs: measure_value
+
+	This function calculates the number of connected regions above a threshold at an evenly spaced number of threshold
+	between the min and max values of the image.
+
+	There is some morphological operations to deal with orphaned pixels and heuristic parameters in the image processing.
+
+	# Usage
+	img = misc.imread('/Users/palmer/Copy/ion_image.png').astype(float)
+	print measure_of_chaos(img,20)
+	'''
 
 	def clean_image(im_clean,interp):
 		# Image properties
