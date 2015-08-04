@@ -16,20 +16,20 @@ class ion_datacube():
             print len(self.coords)
             print len(xic)
             raise ValueError
-        self.xic = np.concatenate((self.xic,xic),axis=1)
+	self.xic.append(xic) # = np.concatenate((self.xic,xic),axis=1)
         self.mzs = np.concatenate((self.mzs,mz))
         self.tol = np.concatenate((self.tol,tol))
+
     def remove_xic(self,mz):
         #remove an xic and related info
         index_to_remove = self.mz.index(mz)
-        print index_to_remove
         raise NotImplementedError
     def add_coords(self,coords):
         # record spatial co-ordinates for each spectrum
         # coords is a ix3 array with x,y,z coords
         self.coords = coords
-        if len(self.xic)==0:
-            self.xic = np.zeros((len(coords),0))
+        #if len(self.xic)==0:
+        #    self.xic = np.zeros((len(coords),0))
         self.calculate_bounding_box()
         self.coord_to_index()
     def calculate_bounding_box(self):
@@ -63,7 +63,7 @@ class ion_datacube():
             raise ValueError
         self.pixel_indices = pixel_indices
     def xic_to_image(self,xic_index):
-        xic = self.xic[:,xic_index]
+        xic = self.xic[xic_index]
         # turn xic into an image
         img = np.zeros((self.nRows*self.nColumns,1))
         for n in range(0,len(self.pixel_indices)):
