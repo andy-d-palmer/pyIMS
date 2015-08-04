@@ -69,3 +69,12 @@ def measure_of_chaos(im,nlevels,interp=True,q_val = 99.):
 	return measure_value #,im,levels,num_objs
 
 
+def measure_of_chaos_dict(d, nRows, nColumns, nlevels=20, interp=True, q_val = 99.):
+	'''Applies :code:`measure_of_chaos` to an image given as a dictionary.'''
+	iSize = nRows*nColumns
+	img = np.zeros((iSize,1))
+	for i,v in d.iteritems():
+		if i >= 0 and i < iSize:
+			img[i] = v
+	return measure_of_chaos(np.reshape(img,(nRows, nColumns)), nlevels, interp, q_val)
+
