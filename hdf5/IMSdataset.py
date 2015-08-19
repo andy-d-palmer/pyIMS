@@ -89,3 +89,19 @@ class IMSdataset():
     def coord_to_index(self, coord):
         index = 0
         return index
+    # Form histogram axis
+    def generate_histogram_axis(self,ppm=1):
+        mz_current = self.mz_min
+        ppm_mult=ppm*1e-6
+        mz_list = []
+        while mz_current<self.mz_max:
+            mz_list.append(mz_current)
+            mz_current=mz_current+mz_current*ppm_mult
+         self.histogram_mz_axis = mz_list
+    def get_histogram_axis(self):
+        try:
+            mz_axis = self.histogram_mz_list()
+        except:
+    def generate_mean_spectrum(self):
+        # calcualte mean along some m/z axis
+        
