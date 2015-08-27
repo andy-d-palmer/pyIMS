@@ -42,6 +42,9 @@ class IMSdataset():
     def get_ion_image(self,mz_list,tol_list,tol_type='mz',return_method='sum'):
         # todo - use tol_type and ensure tol is a vector
         # define mz ranges once
+        if tol_type==ppm:
+            tol_list = [tol*mz/1e6 for mz,tol, in zip(mz_list,tol_list)]
+                 
         mz_list_upper = np.zeros(np.shape(mz_list))
         mz_list_lower = np.zeros(np.shape(mz_list))
         for mm in range(0,len(mz_list)):
@@ -97,11 +100,12 @@ class IMSdataset():
         while mz_current<self.mz_max:
             mz_list.append(mz_current)
             mz_current=mz_current+mz_current*ppm_mult
-         self.histogram_mz_axis = mz_list
+        self.histogram_mz_axis = mz_list
     def get_histogram_axis(self):
         try:
             mz_axis = self.histogram_mz_list()
         except:
-    def generate_mean_spectrum(self):
-        # calcualte mean along some m/z axis
+            mz_axis=generate_histogram_axis()
+        return mz_axis
+
         

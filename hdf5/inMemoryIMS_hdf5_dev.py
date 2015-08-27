@@ -101,6 +101,8 @@ class inMemoryIMS_hdf5():
         for mz,tol in zip(mzs,tols):
             mz_upper = mz + tol
             mz_lower = mz - tol
+            print mz_lower
+            print mz_upper
             idx_left = bisect.bisect_left(self.mz_list,mz_lower)
             idx_right = bisect.bisect_right(self.mz_list,mz_upper)
             # slice list for code clarity

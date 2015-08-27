@@ -62,6 +62,7 @@ class inMemoryIMS_hdf5():
         self.idx_list = self.idx_list[mz_order]
         self.mz_min=self.mz_list[0]
         self.mz_max=self.mz_list[-1]
+        self.histogram_mz_axis={}
         print 'file loaded'
     def get_coords(self):
         coords = np.zeros((len(self.index_list),3))
@@ -85,7 +86,8 @@ class inMemoryIMS_hdf5():
             raise ValueError('No spectral data found in index {}'.format(index))
         return this_spectrum
     def get_ion_image(self,mzs,tols,tol_type='ppm'):
-        tols = tols*mzs/1e6 # to m/z
+        if tol_type=='ppm':
+            tols = tols*mzs/1e6 # to m/z
         data_out = ion_datacube()
         data_out.add_coords(self.coords)
         for mz,tol in zip(mzs,tols):
@@ -108,16 +110,15 @@ class inMemoryIMS_hdf5():
         while mz_current<self.mz_max:
             mz_list.append(mz_current)
             mz_current=mz_current+mz_current*ppm_mult
-        self.histogram_mz_axis = mz_list
-    def get_histogram_axis(self):
+        self.histogram_mz_axis[ppm] = mz_list
+    def get_histogram_axis(self,ppm=1.):
         try:
-            mz_axis = self.histogram_mz_list()
+            mz_axis = self.histogram_mz_list[ppm]
         except:
-            print 'generating histogram with default ppm (1)' 
-            self.generate_histogram_axis()
-        return self.histogram_mz_axis
-    def generate_summary_spectrum(self,summary_type='mean'):
-        hist_axis = self.get_histogram_axis()
+            self.generate_histogram_axis(ppm=ppm)
+        return self.histogram_mz_axis[ppm]
+    def generate_summary_spectrum(self,summary_type='mean',ppm=1.):
+        hist_axis = self.get_histogram_axis(ppm=ppm)
         # calcualte mean along some m/z axis
         mean_spec=np.zeros(np.shape(hist_axis))
         for ii in range(0,len(hist_axis)-1):   

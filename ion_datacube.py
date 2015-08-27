@@ -8,15 +8,12 @@ class ion_datacube():
         self.bounding_box = [] # tuple (x,y,w,h) in co-ordinate space
         self.coords =[] # co-ordiantes of every pixel
         self.mzs = [] # centroids of each xic vector
-        self.tol = [] # tolerance window around centroids
+        self.tol = [] # tolerance window around centroids in m/z
     def add_xic(self,xic,mz,tol): 
-        # add an ion to the datacube 
-        if len(self.coords) != len(xic):
-            print 'size of co-ordinates to not match xic'
-            print len(self.coords)
-            print len(xic)
-            raise ValueError
-	self.xic.append(xic) # = np.concatenate((self.xic,xic),axis=1)
+        # add an eXtracted Ion Chromatogram to the datacube 
+        if len(self.coords) != len(xic):    
+            raise ValueError('size of co-ordinates to not match xic (coords:{} xic:{})'.format(len(self.coords),len(xic)))
+        self.xic.append(xic) # = np.concatenate((self.xic,xic),axis=1)
         self.mzs = np.concatenate((self.mzs,mz))
         self.tol = np.concatenate((self.tol,tol))
 
@@ -33,10 +30,11 @@ class ion_datacube():
         self.calculate_bounding_box()
         self.coord_to_index()
     def calculate_bounding_box(self):
+        self.bounding_box=[]
         for ii in range(0,3):
             self.bounding_box.append(np.amin(self.coords[:,ii]))
             self.bounding_box.append(np.amax(self.coords[:,ii]))
-    def coord_to_index(self,transform_type='reg_grid'):
+    def coord_to_index(self,transform_type='reg_grid',params=()):
         # this function maps coords onto pixel indicies (assuming a grid defined by bounding box and transform type)
         # -implement methods such as interp onto grid spaced over coords
         # -currently treats coords as grid positions, 
@@ -48,16 +46,21 @@ class ion_datacube():
             _coord = np.asarray(self.coords) 
             _coord = np.around(_coord,5) # correct for numerical precision   
             _coord = _coord - np.amin(_coord,axis=0)
-            # calculate step size in xyz
-            step = np.zeros((3,1))
-            for ii in range(0,3):
-                step[ii] = np.mean(np.diff(np.unique(_coord[:,ii])))  
-            _coord = (_coord.T / step).T
+            if params==(): #no additional info, guess step size in xyz
+                step = np.zeros((3,1))
+                for ii in range(0,3):
+                    step[ii] = np.mean(np.diff(np.unique(_coord[:,ii])))  
+            else:
+                step=params[0]
+            # coordinate to pixels
+            for c in range(0,len(_coord)):
+                for ii in range(0,3):
+                    _coord[c,ii] = _coord[c,ii]/step[ii]
             _coord_max = np.amax(_coord,axis=0)
             self.nColumns = _coord_max[1]+1
-            self.nRows = _coord_max[0]+1
-            for c in range(0,len(_coord)):
-                pixel_indices[c] = _coord[c,0]*(self.nColumns) + _coord[c,1]
+            self.nRows = _coord_max[0]+1            
+            for c in range(0,len(_coord)): #to vector index, rowmajor
+                 pixel_indices[c] = _coord[c,0]*(self.nColumns) + _coord[c,1]            
         else:
             print 'transform type not recognised'
             raise ValueError
