@@ -84,14 +84,13 @@ class inMemoryIMS_hdf5():
             tols = tols*mzs/1e6 # to m/z
         data_out = ion_datacube()
         data_out.add_coords(self.coords)
-        for mz,tol in zip(mzs,tols):
-            mz_upper = mz + tol
-            mz_lower = mz - tol
-            idx_left = bisect.bisect_left(self.mz_list,mz_lower)
-            idx_right = bisect.bisect_right(self.mz_list,mz_upper)
+
+        idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
+        idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
+        for mz,tol,il,ir in zip(mzs,tols,idx_left,idx_right):
             # slice list for code clarity
-            count_vect = np.concatenate((np.asarray([0]),self.count_list[idx_left:idx_right],np.asarray([0])))
-            idx_vect = np.concatenate((np.asarray([0]),self.idx_list[idx_left:idx_right],np.asarray([max(self.index_list)])))
+            count_vect = np.concatenate((np.asarray([0]),self.count_list[il:ir],np.asarray([0])))
+            idx_vect = np.concatenate((np.asarray([0]),self.idx_list[il:ir],np.asarray([max(self.index_list)])))
             # bin vectors
             ion_vect=np.bincount(idx_vect,count_vect)
             data_out.add_xic(ion_vect,[mz],[tol])

@@ -12,7 +12,17 @@ There is some morphological operations to deal with orphaned pixels and heuristi
 img = misc.imread('/Users/palmer/Copy/ion_image.png').astype(float)
 print measure_of_chaos(img,20)
  '''
+
+# try to use cv2 for faster image processing
+try:
+    import cv2
+    cv2.connectedComponents # relatively recent addition, so check presence
+    opencv_found = True
+except (ImportError, AttributeError):
+    opencv_found = False
+
 def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.): 
+    global opencv_found
     import numpy as np
     from scipy import ndimage, misc, ndarray, interpolate 
     from scipy.signal import medfilt
@@ -61,20 +71,29 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
     # calculate levels
     levels = np.linspace(0,1,nlevels) #np.amin(im), np.amax(im)
     # hardcoded morphology masks
-    dilate_mask = [[0,1,0],[1,1,1],[0,1,0]]
-    erode_mask = [[1,1,1],[1,1,1],[1,1,1]]
+    dilate_mask = np.array([[0,1,0],[1,1,1],[0,1,0]], dtype=np.uint8)
+    erode_mask = np.array([[1,1,1],[1,1,1],[1,1,1]], dtype=np.uint8)
     label_mask = np.ones((3,3))
 
-    # Go though levels and calculate number of objects
-    num_objs = []
-    for lev in levels:
+    def count_objects_ndimage(im, lev):
         # Threshold at level
         bw = (im > lev)
         # Morphological operations
         bw=ndimage.morphology.binary_dilation(bw,structure=dilate_mask)
         bw=ndimage.morphology.binary_erosion(bw,structure=erode_mask)
         # Record objects at this level
-        num_objs.append(ndimage.label(bw)[1])#second output is number of objects
+        return ndimage.label(bw)[1] #second output is number of objects
+
+    def count_objects_opencv(im, lev):
+        bw = (im > lev).astype(np.uint8)
+        cv2.dilate(bw, dilate_mask)
+        cv2.erode(bw, erode_mask)
+        return cv2.connectedComponents(bw)[0] - 1 # extra obj is background
+
+    count_objects = count_objects_opencv if opencv_found else count_objects_ndimage
+
+    # Go through levels and calculate number of objects
+    num_objs = [count_objects(im, level) for level in levels]
     measure_value = float(np.sum(num_objs))/(sum_notnull*nlevels)
     return measure_value,im,levels,num_objs
 
