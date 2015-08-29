@@ -36,25 +36,19 @@ class inMemoryIMS_hdf5():
             if len(mzs) != len(counts):
                 raise TypeError('length of mzs ({}) not equal to counts ({})'.format(len(mzs),len(counts)))
             # Enforce data limits
-            mz_range = [m>min_mz and m<max_mz for m in mzs]  
-            counts=counts[np.where(mz_range)] #using mz_range as a boolean index failed - just returned the first value over and over
-            mzs=mzs[np.where(mz_range)]
-            ct_gt0 = counts>min_int
-            mzs = mzs[np.where(ct_gt0)]
-            counts=counts[np.where(ct_gt0)]
+            valid = np.where((mzs>min_mz) & (mzs<max_mz) & (counts > min_int))
+            counts=counts[valid]
+            mzs=mzs[valid]
 
             # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
-            for a in list(mzs):
-                self.mz_list.append(a)
-            for c in list(counts):
-                self.count_list.append(c)
-            for ix in ii*np.ones((len(mzs),),dtype =int):
-                self.idx_list.append(ix)
+            self.mz_list.append(mzs)
+            self.count_list.append(counts)
+            self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
             
         print 'loaded spectra'
-        self.mz_list = np.asarray(self.mz_list)
-        self.count_list = np.asarray(self.count_list)
-        self.idx_list = np.asarray(self.idx_list)
+        self.mz_list = np.concatenate(self.mz_list)
+        self.count_list = np.concatenate(self.count_list)
+        self.idx_list = np.concatenate(self.idx_list)
         # sort by mz for fast image formation
         mz_order = np.argsort(self.mz_list)
         self.mz_list = self.mz_list[mz_order]
