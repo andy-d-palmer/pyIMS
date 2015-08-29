@@ -24,7 +24,13 @@ class inMemoryIMS_hdf5():
             self.index_list = map(int,self.hdf['/spectral_data'].keys())
         else: 
             self.index_list = index_range
+        self.max_index = max(self.index_list)
         self.coords = self.get_coords()
+        # precompute pixel indices for use in get_ion_image
+        cube = ion_datacube()
+        cube.add_coords(self.coords)
+        self.cube_pixel_indices = cube.pixel_indices
+        self.cube_n_row, self.cube_n_col = cube.nRows, cube.nColumns
         # load data into memory
         self.mz_list = []
         self.count_list = []
@@ -83,16 +89,20 @@ class inMemoryIMS_hdf5():
         if tol_type=='ppm':
             tols = tols*mzs/1e6 # to m/z
         data_out = ion_datacube()
-        data_out.add_coords(self.coords)
+        # add precomputed pixel indices
+        data_out.coords = self.coords
+        data_out.pixel_indices = self.cube_pixel_indices
+        data_out.nRows = self.cube_n_row
+        data_out.nColumns = self.cube_n_col
 
         idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
         idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
         for mz,tol,il,ir in zip(mzs,tols,idx_left,idx_right):
             # slice list for code clarity
-            count_vect = np.concatenate((np.asarray([0]),self.count_list[il:ir],np.asarray([0])))
-            idx_vect = np.concatenate((np.asarray([0]),self.idx_list[il:ir],np.asarray([max(self.index_list)])))
+            idx_vect = self.idx_list[il:ir]
+            count_vect = self.count_list[il:ir]
             # bin vectors
-            ion_vect=np.bincount(idx_vect,count_vect)
+            ion_vect=np.bincount(idx_vect,count_vect,minlength=self.max_index+1)
             data_out.add_xic(ion_vect,[mz],[tol])
         return data_out
         # Form histogram axis
