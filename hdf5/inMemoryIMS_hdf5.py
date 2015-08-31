@@ -24,7 +24,13 @@ class inMemoryIMS_hdf5():
             self.index_list = map(int,self.hdf['/spectral_data'].keys())
         else: 
             self.index_list = index_range
+        self.max_index = max(self.index_list)
         self.coords = self.get_coords()
+        # precompute pixel indices for use in get_ion_image
+        cube = ion_datacube()
+        cube.add_coords(self.coords)
+        self.cube_pixel_indices = cube.pixel_indices
+        self.cube_n_row, self.cube_n_col = cube.nRows, cube.nColumns
         # load data into memory
         self.mz_list = []
         self.count_list = []
@@ -36,25 +42,19 @@ class inMemoryIMS_hdf5():
             if len(mzs) != len(counts):
                 raise TypeError('length of mzs ({}) not equal to counts ({})'.format(len(mzs),len(counts)))
             # Enforce data limits
-            mz_range = [m>min_mz and m<max_mz for m in mzs]  
-            counts=counts[np.where(mz_range)] #using mz_range as a boolean index failed - just returned the first value over and over
-            mzs=mzs[np.where(mz_range)]
-            ct_gt0 = counts>min_int
-            mzs = mzs[np.where(ct_gt0)]
-            counts=counts[np.where(ct_gt0)]
+            valid = np.where((mzs>min_mz) & (mzs<max_mz) & (counts > min_int))
+            counts=counts[valid]
+            mzs=mzs[valid]
 
             # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
-            for a in list(mzs):
-                self.mz_list.append(a)
-            for c in list(counts):
-                self.count_list.append(c)
-            for ix in ii*np.ones((len(mzs),),dtype =int):
-                self.idx_list.append(ix)
+            self.mz_list.append(mzs)
+            self.count_list.append(counts)
+            self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
             
         print 'loaded spectra'
-        self.mz_list = np.asarray(self.mz_list)
-        self.count_list = np.asarray(self.count_list)
-        self.idx_list = np.asarray(self.idx_list)
+        self.mz_list = np.concatenate(self.mz_list)
+        self.count_list = np.concatenate(self.count_list)
+        self.idx_list = np.concatenate(self.idx_list)
         # sort by mz for fast image formation
         mz_order = np.argsort(self.mz_list)
         self.mz_list = self.mz_list[mz_order]
@@ -89,17 +89,20 @@ class inMemoryIMS_hdf5():
         if tol_type=='ppm':
             tols = tols*mzs/1e6 # to m/z
         data_out = ion_datacube()
-        data_out.add_coords(self.coords)
-        for mz,tol in zip(mzs,tols):
-            mz_upper = mz + tol
-            mz_lower = mz - tol
-            idx_left = bisect.bisect_left(self.mz_list,mz_lower)
-            idx_right = bisect.bisect_right(self.mz_list,mz_upper)
+        # add precomputed pixel indices
+        data_out.coords = self.coords
+        data_out.pixel_indices = self.cube_pixel_indices
+        data_out.nRows = self.cube_n_row
+        data_out.nColumns = self.cube_n_col
+
+        idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
+        idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
+        for mz,tol,il,ir in zip(mzs,tols,idx_left,idx_right):
             # slice list for code clarity
-            count_vect = np.concatenate((np.asarray([0]),self.count_list[idx_left:idx_right],np.asarray([0])))
-            idx_vect = np.concatenate((np.asarray([0]),self.idx_list[idx_left:idx_right],np.asarray([max(self.index_list)])))
+            idx_vect = self.idx_list[il:ir]
+            count_vect = self.count_list[il:ir]
             # bin vectors
-            ion_vect=np.bincount(idx_vect,count_vect)
+            ion_vect=np.bincount(idx_vect,count_vect,minlength=self.max_index+1)
             data_out.add_xic(ion_vect,[mz],[tol])
         return data_out
         # Form histogram axis

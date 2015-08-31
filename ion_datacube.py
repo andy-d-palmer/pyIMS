@@ -53,14 +53,12 @@ class ion_datacube():
             else:
                 step=params[0]
             # coordinate to pixels
-            for c in range(0,len(_coord)):
-                for ii in range(0,3):
-                    _coord[c,ii] = _coord[c,ii]/step[ii]
+            _coord /= np.reshape(step, (3,))
             _coord_max = np.amax(_coord,axis=0)
             self.nColumns = _coord_max[1]+1
             self.nRows = _coord_max[0]+1            
-            for c in range(0,len(_coord)): #to vector index, rowmajor
-                 pixel_indices[c] = _coord[c,0]*(self.nColumns) + _coord[c,1]            
+            pixel_indices = _coord[:,0] * self.nColumns + _coord[:,1]
+            pixel_indices = pixel_indices.astype(np.int32)
         else:
             print 'transform type not recognised'
             raise ValueError
@@ -68,9 +66,7 @@ class ion_datacube():
     def xic_to_image(self,xic_index):
         xic = self.xic[xic_index]
         # turn xic into an image
-        img = np.zeros((self.nRows*self.nColumns,1))
-        for n in range(0,len(self.pixel_indices)):
-            img[self.pixel_indices[n]] = xic[n]
-    
+        img = np.zeros(self.nRows*self.nColumns)
+        img[self.pixel_indices] = xic
         img=np.reshape(img,(self.nRows,self.nColumns))
         return img
