@@ -6,15 +6,9 @@
  
 This function calculates the correlation between images 
 '''
-def isotope_image_correlation(images_as_2darray,weights=[],mask=False): 
+def isotope_image_correlation(images_as_2darray,weights=[]): 
     import numpy as np
-    from scipy import ndimage, misc, ndarray, interpolate 
-    from scipy.signal import medfilt
-    if mask ==True:
-        images_as_2darray = np.ma.masked_array(images_as_2darray, mask=images_as_2darray[:,0]>0)
-        iso_correlation=np.ma.corrcoef(images_as_2darray)[1:,0]
-    else:
-        iso_correlation = np.corrcoef(images_as_2darray)[1:,0]  # slightly faster to compute all correlations and pull the elements needed
+    iso_correlation = np.corrcoef(images_as_2darray)[1:,0]  # slightly faster to compute all correlations and pull the elements needed
     iso_correlation[np.isnan(iso_correlation)] = 0 # when all values are the same (e.g. zeros) then correlation is undefined
     if weights==[]:
         return np.average(iso_correlation)
