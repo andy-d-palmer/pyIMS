@@ -102,10 +102,13 @@ class inMemoryIMS_hdf5():
         data_out.pixel_indices = self.cube_pixel_indices
         data_out.nRows = self.cube_n_row
         data_out.nColumns = self.cube_n_col
-
+        # Fast search for insertion point of mz in self.mz_list
         idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
         idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
         for mz, tol, il, ir in zip(mzs, tols, idx_left, idx_right):
+            if any((mz<self.mz_list[0],mz>self.mz_list[-1])):
+                data_out.add_xic(np.zeros(np.shape(self.cube_pixel_indices)), [mz], [tol])
+                continue
             # slice list for code clarity
             mz_vect=self.mz_list[il:ir-1]
             idx_vect = self.idx_list[il:ir-1]
