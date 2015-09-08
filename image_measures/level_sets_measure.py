@@ -48,7 +48,7 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
                 im_clean=f(np.arange(0,im_size[1]),np.arange(0,im_size[0]))
             except:
                 print 'interp bail out'                
-                clean = np.zeros(np.shape(im)) # if interp fails, bail out
+                im_clean = np.zeros(np.shape(im)) # if interp fails, bail out
         elif interp=='median':
                 im_clean = medfilt(im_clean)
         else:
