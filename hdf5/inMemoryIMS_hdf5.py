@@ -65,6 +65,11 @@ class inMemoryIMS_hdf5():
         self.mz_min = self.mz_list[0]
         self.mz_max = self.mz_list[-1]
         self.histogram_mz_axis = {}
+
+        # split binary searches into two stages for better locality
+        self.window_size = 1024
+        self.mz_sublist = self.mz_list[::self.window_size]
+
         print 'file loaded'
 
     def get_coords(self):
@@ -103,16 +108,19 @@ class inMemoryIMS_hdf5():
         data_out.nRows = self.cube_n_row
         data_out.nColumns = self.cube_n_col
         # Fast search for insertion point of mz in self.mz_list
-        idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
-        idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
+        # First stage is looking for windows using the sublist
+        idx_left = np.searchsorted(self.mz_sublist, mzs - tols, 'l')
+        idx_right = np.searchsorted(self.mz_sublist, mzs + tols, 'r')
         for mz, tol, il, ir in zip(mzs, tols, idx_left, idx_right):
-            if any((mz<self.mz_list[0],mz>self.mz_list[-1])):
-                data_out.add_xic(np.zeros(np.shape(self.cube_pixel_indices)), [mz], [tol])
-                continue
+            l = max(il - 1, 0) * self.window_size
+            r = ir * self.window_size
+            # Second stage is binary search within the windows
+            il = l + np.searchsorted(self.mz_list[l:r], mz - tol, 'l')
+            ir = l + np.searchsorted(self.mz_list[l:r], mz + tol, 'r')
             # slice list for code clarity
-            mz_vect=self.mz_list[il:ir-1]
-            idx_vect = self.idx_list[il:ir-1]
-            count_vect = self.count_list[il:ir-1]
+            mz_vect=self.mz_list[il:ir]
+            idx_vect = self.idx_list[il:ir]
+            count_vect = self.count_list[il:ir]
             # bin vectors
             ion_vect = np.bincount(idx_vect, weights=count_vect, minlength=self.max_index + 1)
             data_out.add_xic(ion_vect, [mz], [tol])
