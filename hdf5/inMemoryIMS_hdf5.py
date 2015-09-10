@@ -68,7 +68,7 @@ class inMemoryIMS_hdf5():
 
         # split binary searches into two stages for better locality
         self.window_size = 1024
-        self.mz_sublist = self.mz_list[::self.window_size]
+        self.mz_sublist = self.mz_list[::self.window_size].copy()
 
         print 'file loaded'
 
