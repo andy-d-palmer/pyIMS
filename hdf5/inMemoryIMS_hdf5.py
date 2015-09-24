@@ -12,11 +12,11 @@ from pyIMS.ion_datacube import ion_datacube
 
 
 class inMemoryIMS_hdf5():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[]):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True):
         file_size = os.path.getsize(filename)
-        self.load_file(filename, min_mz, max_mz, index_range=index_range)
+        self.load_file(filename, min_mz, max_mz, index_range=index_range,cache_spectra=cache_spectra)
 
-    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[]):
+    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True):
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.file_dir, self.filename = file_type = os.path.splitext(filename)
@@ -33,25 +33,26 @@ class inMemoryIMS_hdf5():
         cube.add_coords(self.coords)
         self.cube_pixel_indices = cube.pixel_indices
         self.cube_n_row, self.cube_n_col = cube.nRows, cube.nColumns
-        # load data into memory
-        self.mz_list = []
-        self.count_list = []
-        self.idx_list = []
-        for ii in self.index_list:
-            # load spectrum, keep values gt0 (shouldn't be here anyway)
-            this_spectrum = self.get_spectrum(ii)
-            mzs, counts = this_spectrum.get_spectrum(source='centroids')
-            if len(mzs) != len(counts):
-                raise TypeError('length of mzs ({}) not equal to counts ({})'.format(len(mzs), len(counts)))
-            # Enforce data limits
-            valid = np.where((mzs > min_mz) & (mzs < max_mz) & (counts > min_int))
-            counts = counts[valid]
-            mzs = mzs[valid]
+        if cache_spectra == True:
+            # load data into memory
+            self.mz_list = []
+            self.count_list = []
+            self.idx_list = []
+            for ii in self.index_list:
+                # load spectrum, keep values gt0 (shouldn't be here anyway)
+                this_spectrum = self.get_spectrum(ii)
+                mzs, counts = this_spectrum.get_spectrum(source='centroids')
+                if len(mzs) != len(counts):
+                    raise TypeError('length of mzs ({}) not equal to counts ({})'.format(len(mzs), len(counts)))
+                # Enforce data limits
+                valid = np.where((mzs > min_mz) & (mzs < max_mz) & (counts > min_int))
+                counts = counts[valid]
+                mzs = mzs[valid]
 
-            # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
-            self.mz_list.append(mzs)
-            self.count_list.append(counts)
-            self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
+                # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
+                self.mz_list.append(mzs)
+                self.count_list.append(counts)
+                self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
 
         print 'loaded spectra'
         self.mz_list = np.concatenate(self.mz_list)
@@ -107,6 +108,46 @@ class inMemoryIMS_hdf5():
         data_out.pixel_indices = self.cube_pixel_indices
         data_out.nRows = self.cube_n_row
         data_out.nColumns = self.cube_n_col
+            return data_out
+        def search_sort(mzs,tols):
+            data_out = blank_dataout()
+            idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
+            idx_right = np.searchsorted(self.mz_list, mzs + tols, 'r')
+            for mz, tol, il, ir in zip(mzs, tols, idx_left, idx_right):
+                if any((mz<self.mz_list[0],mz>self.mz_list[-1])):
+                    data_out.add_xic(np.zeros(np.shape(self.cube_pixel_indices)), [mz], [tol])
+                    continue
+                # slice list for code clarity
+                mz_vect=self.mz_list[il:ir]
+                idx_vect = self.idx_list[il:ir]
+                count_vect = self.count_list[il:ir]
+                # bin vectors
+                ion_vect = np.bincount(idx_vect, weights=count_vect, minlength=self.max_index + 1)
+                data_out.add_xic(ion_vect, [mz], [tol])
+            return data_out
+        def search_bisect(mzs,tols):
+            data_out = blank_dataout()
+            for mz,tol in zip(mzs,tols):
+                if any((mz<self.mz_list[0],mz>self.mz_list[-1])):
+                    data_out.add_xic(np.zeros(np.shape(self.cube_pixel_indices)), [mz], [tol])
+                    continue
+                mz_upper = mz + tol
+                mz_lower = mz - tol
+                il = bisect.bisect_left(self.mz_list,mz_lower)
+                ir = bisect.bisect_right(self.mz_list,mz_upper)
+                # slice list for code clarity
+                mz_vect=self.mz_list[il:ir]
+                idx_vect = self.idx_list[il:ir]
+                count_vect = self.count_list[il:ir]
+                # bin vectors
+                ion_vect = np.bincount(idx_vect, weights=count_vect, minlength=self.max_index + 1)
+                data_out.add_xic(ion_vect, [mz], [tol])
+            return data_out
+        if type(mzs) not in (np.ndarray, list):
+            mzs = np.asarray([mzs, ])
+        if tol_type == 'ppm':
+            tols = tols * mzs / 1e6  # to m/z
+
         # Fast search for insertion point of mz in self.mz_list
         # First stage is looking for windows using the sublist
         idx_left = np.searchsorted(self.mz_sublist, mzs - tols, 'l')
