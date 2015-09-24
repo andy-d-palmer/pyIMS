@@ -9,7 +9,7 @@ class ion_datacube():
         self.coords =[] # co-ordiantes of every pixel
         self.mzs = [] # centroids of each xic vector
         self.tol = [] # tolerance window around centroids in m/z
-    def add_xic(self,xic,mz,tol): 
+    def add_xic(self,xic,mz,tol):
         # add an eXtracted Ion Chromatogram to the datacube 
         if len(self.coords) != len(xic):    
             raise ValueError('size of co-ordinates to not match xic (coords:{} xic:{})'.format(len(self.coords),len(xic)))
@@ -66,7 +66,7 @@ class ion_datacube():
     def xic_to_image(self,xic_index):
         xic = self.xic[xic_index]
         # turn xic into an image
-        img = np.zeros(self.nRows*self.nColumns)
+        img = -1+np.zeros(self.nRows*self.nColumns)
         img[self.pixel_indices] = xic
         img=np.reshape(img,(self.nRows,self.nColumns))
         return img
