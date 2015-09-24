@@ -97,4 +97,21 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
     measure_value = float(np.sum(num_objs))/(sum_notnull*nlevels)
     return measure_value,im,levels,num_objs
 
+def measure_of_chaos_fit(im,nlevels,interp='interpolate',q_val = 99.): 
+    # this updates the scoring function from the main algorithm. 
+    from scipy.optimize import curve_fit
+    import numpy as np
+    def func(x,a,b):
+        from scipy.stats import norm
+        return norm.cdf(x, loc=a, scale=b)
+    
+    measure_value,im,levels,num_objs = measure_of_chaos(im,nlevels,interp=interp,q_val=q_val)
+    if measure_value == np.nan: #if basic algorithm failed then we're going to fail here too
+        return np.nan
+    cdf_curve = np.cumsum(num_objs)/float(np.sum(num_objs))
+    popt, pcov = curve_fit(func, np.linspace(0,1,nlevels), cdf_curve, p0=(0.5,0.05))
+    pdf_fitted = func(np.linspace(0,1,nlevels),popt[0],popt[1])
+    #return 1-np.sqrt(np.sum((pdf_fitted - cdf_curve)**2))
+    return 1-np.sum(np.abs((pdf_fitted - cdf_curve)))
 
+    
