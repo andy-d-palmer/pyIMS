@@ -33,6 +33,8 @@ class inMemoryIMS_hdf5():
         cube.add_coords(self.coords)
         self.cube_pixel_indices = cube.pixel_indices
         self.cube_n_row, self.cube_n_col = cube.nRows, cube.nColumns
+        self.histogram_mz_axis = {}
+
         if cache_spectra == True:
             # load data into memory
             self.mz_list = []
@@ -53,24 +55,20 @@ class inMemoryIMS_hdf5():
                 self.mz_list.append(mzs)
                 self.count_list.append(counts)
                 self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
-
-        print 'loaded spectra'
-        self.mz_list = np.concatenate(self.mz_list)
-        self.count_list = np.concatenate(self.count_list)
-        self.idx_list = np.concatenate(self.idx_list)
-        # sort by mz for fast image formation
-        mz_order = np.argsort(self.mz_list)
-        self.mz_list = self.mz_list[mz_order]
-        self.count_list = self.count_list[mz_order]
-        self.idx_list = self.idx_list[mz_order]
-        self.mz_min = self.mz_list[0]
-        self.mz_max = self.mz_list[-1]
-        self.histogram_mz_axis = {}
-
-        # split binary searches into two stages for better locality
-        self.window_size = 1024
-        self.mz_sublist = self.mz_list[::self.window_size].copy()
-
+            self.mz_min = self.mz_list[0]
+            self.mz_max = self.mz_list[-1]
+            print 'loaded spectra'
+            self.mz_list = np.concatenate(self.mz_list)
+            self.count_list = np.concatenate(self.count_list)
+            self.idx_list = np.concatenate(self.idx_list)
+            # sort by mz for fast image formation
+            mz_order = np.argsort(self.mz_list)
+            self.mz_list = self.mz_list[mz_order]
+            self.count_list = self.count_list[mz_order]
+            self.idx_list = self.idx_list[mz_order]
+            # split binary searches into two stages for better locality
+            self.window_size = 1024
+            self.mz_sublist = self.mz_list[::self.window_size].copy()
         print 'file loaded'
 
     def get_coords(self):
@@ -98,17 +96,13 @@ class inMemoryIMS_hdf5():
         return this_spectrum
 
     def get_ion_image(self, mzs, tols, tol_type='ppm'):
-        if type(mzs) not in (np.ndarray, list):
-            mzs = np.asarray([mzs, ])
-        if tol_type == 'ppm':
-            tols = tols * mzs / 1e6  # to m/z
         data_out = ion_datacube()
         # add precomputed pixel indices
         data_out.coords = self.coords
         data_out.pixel_indices = self.cube_pixel_indices
         data_out.nRows = self.cube_n_row
         data_out.nColumns = self.cube_n_col
-            return data_out
+
         def search_sort(mzs,tols):
             data_out = blank_dataout()
             idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
