@@ -66,7 +66,10 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
         bw=ndimage.morphology.binary_erosion(bw,structure=erode_mask)
         # Record objects at this level
         num_objs.append(ndimage.label(bw)[1])#second output is number of objects
-    measure_value = float(np.sum(num_objs))/(sum_notnull*nlevels)
+        sum_vals = np.sum(num_objs)
+        if sum_vals == nlevels*num_objs[-1]:#single pixel noise elimination
+            sum_vals = 0
+    measure_value = float(sum_vals)/(sum_notnull*nlevels)
     return measure_value,im,levels,num_objs
 
 
