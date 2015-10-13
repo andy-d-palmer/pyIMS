@@ -30,12 +30,12 @@ class inMemoryIMS():
                 self.index_list = index_range
         elif self.file_type == '.imzml':
             self.imzml = ImzMLParser(filename)
-            self.index_list=self.imzml.coordinates
+            self.index_list=map(list, self.imzml.coordinates)
         else:
             raise TypeError('File type not recogised: {}'.format(self.file_type))
         self.max_index = max(self.index_list)
         self.coords = self.get_coords()
-        # precompute pixel indices for use in get_ion_image
+
         cube = ion_datacube()
         cube.add_coords(self.coords)
         self.cube_pixel_indices = cube.pixel_indices
