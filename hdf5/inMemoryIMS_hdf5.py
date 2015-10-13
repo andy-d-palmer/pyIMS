@@ -55,8 +55,7 @@ class inMemoryIMS_hdf5():
                 self.mz_list.append(mzs)
                 self.count_list.append(counts)
                 self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
-            self.mz_min = self.mz_list[0]
-            self.mz_max = self.mz_list[-1]
+
             print 'loaded spectra'
             self.mz_list = np.concatenate(self.mz_list)
             self.count_list = np.concatenate(self.count_list)
@@ -66,6 +65,8 @@ class inMemoryIMS_hdf5():
             self.mz_list = self.mz_list[mz_order]
             self.count_list = self.count_list[mz_order]
             self.idx_list = self.idx_list[mz_order]
+            self.mz_min = self.mz_list[0]
+            self.mz_max = self.mz_list[-1]
             # split binary searches into two stages for better locality
             self.window_size = 1024
             self.mz_sublist = self.mz_list[::self.window_size].copy()
@@ -195,6 +196,8 @@ class inMemoryIMS_hdf5():
             elif summary_type == 'freq':
                 idx_vect = self.idx_list[idx_left:idx_right]
                 mean_spec[ii] = float(len(np.unique(idx_vect)))
+            else:
+                raise ValueError('Summary type not recognised; {}'.format(summary_type))
         if summary_type == 'mean':
             mean_spec = mean_spec / len(self.index_list)
         elif summary_type == 'freq':
