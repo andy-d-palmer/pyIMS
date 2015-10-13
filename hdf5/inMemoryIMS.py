@@ -30,12 +30,11 @@ class inMemoryIMS():
                 self.index_list = index_range
         elif self.file_type == '.imzml':
             self.imzml = ImzMLParser(filename)
-            self.index_list=map(list, self.imzml.coordinates)
+            self.index_list=range(0,len(self.imzml.coordinates))
         else:
             raise TypeError('File type not recogised: {}'.format(self.file_type))
         self.max_index = max(self.index_list)
         self.coords = self.get_coords()
-
         cube = ion_datacube()
         cube.add_coords(self.coords)
         self.cube_pixel_indices = cube.pixel_indices
@@ -83,6 +82,7 @@ class inMemoryIMS():
         # wrapper for redirecting requests to correct parser
         if self.file_type == '.imzml':
             coords = self.get_coords_imzml()
+            coords[:,[0, 1]] = coords[:,[1, 0]]
         elif self.file_type == '.hdf5':
             coords = self.get_coords_hdf5()
         return coords
@@ -90,7 +90,11 @@ class inMemoryIMS():
 
     def get_coords_imzml(self):# get real world coordinates
         print('TODO: convert indices into real world coordinates')
-        return self.imzml.coordinates
+        coords = np.asarray(self.imzml.coordinates)
+        if len(self.imzml.coordinates[0]) == 2: #2D - append zero z-coord
+            coords = np.concatenate((coords,np.zeros((len(coords),1))),axis=1)
+        return coords
+
 
     def get_coords_hdf5(self):
         coords = np.zeros((len(self.index_list), 3))
