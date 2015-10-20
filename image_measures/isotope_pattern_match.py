@@ -15,4 +15,4 @@ def isotope_pattern_match(images_flat, theor_iso_intensities):
         image_ints.append(np.sum(images_flat[ii]))
     pattern_match = 1 - np.mean(abs(theor_iso_intensities/np.linalg.norm(theor_iso_intensities) -
                                     image_ints/np.linalg.norm(image_ints)))
-    return pattern_match if not np.isnan(pattern_match) else 0
+    return pattern_match if not np.isnan(pattern_match) and pattern_match < 1.0 else 0
