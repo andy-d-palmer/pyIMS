@@ -10,6 +10,7 @@ def isotope_pattern_match(images_flat, theor_iso_intensities):
     :param theor_iso_intensities:
     :return: measure_value
     """
+    # test
     image_ints = []
     for ii, _ in enumerate(theor_iso_intensities):
         image_ints.append(np.sum(images_flat[ii]))
