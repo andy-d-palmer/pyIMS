@@ -3,12 +3,16 @@ import numpy as np
 from pyMS.mass_spectrum import mass_spectrum
 class ion_datacube():
     # a class for holding a datacube from an MSI dataset and producing ion images
-    def __init__(self): # define mandatory parameters (todo- validator to check all present)
+    def __init__(self,step_size=[]): # define mandatory parameters (todo- validator to check all present)
         self.xic = [] # 'xtracted ion chromatogram (2d array of intensities(vector of time by mzs))
         self.bounding_box = [] # tuple (x,y,w,h) in co-ordinate space
         self.coords =[] # co-ordiantes of every pixel
         self.mzs = [] # centroids of each xic vector
         self.tol = [] # tolerance window around centroids in m/z
+        if step_size == []:
+            self.step_size = []
+        else:
+            self.step_size = step_size
     def add_xic(self,xic,mz,tol):
         # add an eXtracted Ion Chromatogram to the datacube 
         if len(self.coords) != len(xic):    
@@ -46,14 +50,13 @@ class ion_datacube():
             _coord = np.asarray(self.coords) 
             _coord = np.around(_coord,5) # correct for numerical precision   
             _coord = _coord - np.amin(_coord,axis=0)
-            if params==(): #no additional info, guess step size in xyz
-                step = np.zeros((3,1))
+            if self.step_size==[]: #no additional info, guess step size in xyz
+                self.step_size = np.zeros((3,1))
                 for ii in range(0,3):
-                    step[ii] = np.mean(np.diff(np.unique(_coord[:,ii])))  
-            else:
-                step=params[0]
+                    self.step_size[ii] = np.mean(np.diff(np.unique(_coord[:,ii])))
+
             # coordinate to pixels
-            _coord /= np.reshape(step, (3,))
+            _coord /= np.reshape(self.step_size, (3,))
             _coord_max = np.amax(_coord,axis=0)
             self.nColumns = _coord_max[1]+1
             self.nRows = _coord_max[0]+1            
