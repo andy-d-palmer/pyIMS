@@ -12,11 +12,11 @@ from pyIMS.ion_datacube import ion_datacube
 from pyimzml.ImzMLParser import ImzMLParser
 
 class inMemoryIMS():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True):
         file_size = os.path.getsize(filename)
-        self.load_file(filename, min_mz, max_mz, index_range=index_range,cache_spectra=cache_spectra)
+        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary)
 
-    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True):
+    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True):
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.file_dir, self.filename = os.path.split(filename)
@@ -35,16 +35,22 @@ class inMemoryIMS():
             raise TypeError('File type not recogised: {}'.format(self.file_type))
         self.max_index = max(self.index_list)
         self.coords = self.get_coords()
-        cube = ion_datacube()
+        step_size = self.get_step_size()
+        cube = ion_datacube(step_size=step_size)
         cube.add_coords(self.coords)
         self.cube_pixel_indices = cube.pixel_indices
         self.cube_n_row, self.cube_n_col = cube.nRows, cube.nColumns
         self.histogram_mz_axis = {}
-        if cache_spectra == True:
+        self.mz_min = 9999999999999.
+        self.mz_max = 0.
+        if any([cache_spectra,do_summary]) == True:
             # load data into memory
             self.mz_list = []
             self.count_list = []
             self.idx_list = []
+            if do_summary:
+                self.mic=np.zeros((len(self.index_list),1))
+                self.tic=np.zeros((len(self.index_list),1))
             for ii in self.index_list:
                 # load spectrum, keep values gt0 (shouldn't be here anyway)
                 this_spectrum = self.get_spectrum(ii)
@@ -55,27 +61,41 @@ class inMemoryIMS():
                 valid = np.where((mzs > min_mz) & (mzs < max_mz) & (counts > min_int))
                 counts = counts[valid]
                 mzs = mzs[valid]
-
+                # record min/max
+                if mzs[0]<self.mz_min:
+                    self.mz_min = mzs[0]
+                if mzs[-1]>self.mz_max:
+                    self.mz_max = mzs[-1]
                 # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
-                self.mz_list.append(mzs)
-                self.count_list.append(counts)
-                self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
-
+                if cache_spectra:
+                    self.mz_list.append(mzs)
+                    self.count_list.append(counts)
+                    self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
+                #record summary values
+                if do_summary:
+                    self.tic[ii]=sum(counts)
+                    self.mic[ii]=max(counts)
             print 'loaded spectra'
-            self.mz_list = np.concatenate(self.mz_list)
-            self.count_list = np.concatenate(self.count_list)
-            self.idx_list = np.concatenate(self.idx_list)
-            # sort by mz for fast image formation
-            mz_order = np.argsort(self.mz_list)
-            self.mz_list = self.mz_list[mz_order]
-            self.count_list = self.count_list[mz_order]
-            self.idx_list = self.idx_list[mz_order]
-            self.mz_min = self.mz_list[0]
-            self.mz_max = self.mz_list[-1]
-            # split binary searches into two stages for better locality
-            self.window_size = 1024
-            self.mz_sublist = self.mz_list[::self.window_size].copy()
+            if cache_spectra:
+                self.mz_list = np.concatenate(self.mz_list)
+                self.count_list = np.concatenate(self.count_list)
+                self.idx_list = np.concatenate(self.idx_list)
+                # sort by mz for fast image formation
+                mz_order = np.argsort(self.mz_list)
+                self.mz_list = self.mz_list[mz_order]
+                self.count_list = self.count_list[mz_order]
+                self.idx_list = self.idx_list[mz_order]
+                # split binary searches into two stages for better locality
+                self.window_size = 1024
+                self.mz_sublist = self.mz_list[::self.window_size].copy()
         print 'file loaded'
+
+
+    def get_step_size(self):
+        if self.file_type == '.imzml':
+            return [1,1,1]
+        else:
+            return []
 
 
     def get_coords(self):
@@ -208,15 +228,17 @@ class inMemoryIMS():
         mz_current = self.mz_min
         ppm_mult = ppm * 1e-6
         mz_list = []
-        while mz_current < self.mz_max:
+        while mz_current <= self.mz_max:
             mz_list.append(mz_current)
             mz_current = mz_current + mz_current * ppm_mult
         self.histogram_mz_axis[ppm] = mz_list
 
     def get_histogram_axis(self, ppm=1.):
         try:
-            mz_axis = self.histogram_mz_list[ppm]
-        except:
+            mz_axis = self.histogram_mz_axis[ppm]
+        except AttributeError as e:
+            print e
+            print 'generating histogram axis for ppm {}'.format(ppm)
             self.generate_histogram_axis(ppm=ppm)
         return self.histogram_mz_axis[ppm]
 
@@ -244,3 +266,14 @@ class inMemoryIMS():
         elif summary_type == 'freq':
             mean_spec = mean_spec / len(self.index_list)
         return hist_axis, mean_spec
+
+    def get_summary_image(self,summary_func='tic'):
+        if summary_func not in ['tic','mic']: raise KeyError("requested type not in 'tic' mic'")
+        data_out = ion_datacube()
+        # add precomputed pixel indices
+        data_out.coords = self.coords
+        data_out.pixel_indices = self.cube_pixel_indices
+        data_out.nRows = self.cube_n_row
+        data_out.nColumns = self.cube_n_col
+        data_out.add_xic(np.asarray(getattr(self, summary_func))[self.index_list], [0], [0])
+        return data_out
