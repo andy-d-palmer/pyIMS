@@ -225,19 +225,18 @@ class inMemoryIMS():
         # Form histogram axis
 
     def generate_histogram_axis(self, ppm=1.):
-        mz_current = self.mz_min
         ppm_mult = ppm * 1e-6
-        mz_list = []
+        mz_current = self.mz_min
+        mz_list = [mz_current,]
         while mz_current <= self.mz_max:
-            mz_list.append(mz_current)
             mz_current = mz_current + mz_current * ppm_mult
+            mz_list.append(mz_current)
         self.histogram_mz_axis[ppm] = mz_list
 
     def get_histogram_axis(self, ppm=1.):
         try:
             mz_axis = self.histogram_mz_axis[ppm]
-        except AttributeError as e:
-            print e
+        except KeyError as e:
             print 'generating histogram axis for ppm {}'.format(ppm)
             self.generate_histogram_axis(ppm=ppm)
         return self.histogram_mz_axis[ppm]
