@@ -27,9 +27,9 @@ class slFile():
         return self.Mzs, intensities
 
 
-def centroid_imzml(input_filename, output_filename, step=[]):
+def centroid_imzml(input_filename, output_filename, step=[], apodization=False,w_size=10):
     # write a file to imzml format (centroided)
-    from pyImzML.pyimzml.imzmlwriter import ImzMLWriter
+    from pyimzml.ImzMLWriter import ImzMLWriter
     sl = slFile(input_filename)
     mz_dtype = sl.Mzs.dtype
     int_dtype = sl.get_spectrum(0)[1].dtype
@@ -48,6 +48,11 @@ def centroid_imzml(input_filename, output_filename, step=[]):
         done = 0
         for key in range(0,n_total):
             mzs,intensities = sl.get_spectrum(key)
+            if apodization:
+               import scipy.signal as signal
+               #todo - add to processing list in imzml
+               win = signal.hann(w_size)
+    	       intensities_sg = signal.fftconvolve(intensities, win, mode='same') / sum(win)
             mzs_c, intensities_c, _ = gradient(mzs, intensities)
             pos = coords[key]
             pos = (nrow - 1 - pos[1], pos[0], pos[2])
