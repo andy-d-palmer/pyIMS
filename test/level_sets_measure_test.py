@@ -1,36 +1,32 @@
-__author__ = 'intsco'
-
-import cPickle
-from engine.pyIMS.image_measures.level_sets_measure import measure_of_chaos_dict
-from unittest import TestCase
 import unittest
-from os.path import join, realpath, dirname
+
+import numpy as np
+
+from ..image_measures.level_sets_measure import measure_of_chaos, _nan_to_zero
 
 
-class MeasureOfChaosDictTest(TestCase):
+class MeasureOfChaosTest(unittest.TestCase):
+    def test__nan_to_zero_with_ge_zero(self):
+        ids = (
+            np.zeros(1),
+            np.ones(range(1, 10)),
+            np.arange(1024 * 1024)
+        )
+        for id_ in ids:
+            before = id_.copy()
+            _nan_to_zero(id_)
+            np.testing.assert_array_equal(before, id_)
 
-    def setUp(self):
-        self.rows, self.cols = 65, 65
-        self.input_fn = join(dirname(realpath(__file__)), 'data/measure_of_chaos_dict_test_input.pkl')
-        with open(self.input_fn) as f:
-            self.input_data = cPickle.load(f)
-
-    def testMOCBoundaries(self):
-        for img_d in self.input_data:
-            if len(img_d) > 0:
-                assert 0 <= measure_of_chaos_dict(img_d, self.rows, self.cols) <= 1
-
-    def testEmptyInput(self):
-        # print measure_of_chaos_dict({}, self.cols, self.cols)
-        self.assertRaises(Exception, measure_of_chaos_dict, {}, self.cols, self.cols)
-        self.assertRaises(Exception, measure_of_chaos_dict, None, self.cols, self.cols)
-        self.assertRaises(Exception, measure_of_chaos_dict, (), self.cols, self.cols)
-        self.assertRaises(Exception, measure_of_chaos_dict, [], self.cols, self.cols)
-
-    def testMaxInputDictKeyVal(self):
-        max_key_val = self.rows * self.cols - 1
-        self.assertRaises(Exception, measure_of_chaos_dict, {max_key_val + 10: 1}, self.rows, self.cols)
-
+    def test__nan_to_zero_with_negatives(self):
+        negs = (
+            np.array([-1]),
+            -np.arange(1, 1024 * 1024 + 1).reshape((1024, 1024)),
+            np.linspace(0, -20, 201)
+        )
+        for neg in negs:
+            sh = neg.shape
+            _nan_to_zero(neg)
+            np.testing.assert_array_equal(neg, np.zeros(sh))
 
 if __name__ == '__main__':
     unittest.main()
