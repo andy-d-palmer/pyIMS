@@ -3,37 +3,16 @@ from scipy import ndimage, interpolate
 from scipy.signal import medfilt
 
 
-def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99.):
-    def clean_image(im_clean, interp):
-        # Image properties
-        notnull = im_clean > 0  # does not include nan values
-        im_clean[~notnull] = 0
-        im_size = np.shape(im_clean)
-        # hot spot removal (quantile threshold)
-        im_q = np.percentile(im_clean[notnull], q_val)
-        im_rep = im_clean > im_q
-        im_clean[im_rep] = im_q
-        # interpolate to clean missing values
-        if not interp:
-            # do nothing
-            im_clean = im_clean
-        elif interp == 'interpolate' or interp is True:  # interpolate to replace missing data - not always present
-            try:
-                # interpolate to replace missing data - not always present
-                X, Y = np.meshgrid(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
-                f = interpolate.interp2d(X[notnull], Y[notnull], im_clean[notnull])
-                im_clean = f(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
-            except:
-                print 'interp bail out'
-        elif interp == 'median':
-            im_clean = medfilt(im_clean)
-        else:
-            raise ValueError('{}: interp option not recognised'.format(interp))
-        # scale max to 1
-        im_clean = im_clean / im_q
-        return im_clean
+def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=True):
+    """
 
-    ## Image Pre-Processing
+    :param im:
+    :param nlevels:
+    :param interp:
+    :param q_val:
+    :param overwrite: Whether the input image can be overwritten to save memory
+    :return:
+    """
     # don't process empty images
     if np.sum(im) == 0:
         return np.nan, [], [], []
@@ -41,7 +20,29 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99.):
     # reject very sparse images
     if sum_notnull < 4:
         return np.nan, [], [], []
-    im = clean_image(im, interp)
+
+    if not overwrite:
+        # don't modify original image, make a copy
+        im = im.copy()
+
+    notnull_mask = _nan_to_zero(im)
+    im_q = _quantile_threshold(im, notnull_mask, q_val)
+
+    # interpolate to clean missing values
+    interp_func = None
+    if not interp:
+        interp_func = lambda x: x
+    elif interp == 'interpolate' or interp is True:  # interpolate to replace missing data - not always present
+        def interp_func(image):
+            try:
+                return _interpolate(image, notnull_mask)
+            except:
+                print 'interp bail out'
+    elif interp == 'median':
+        interp_func = medfilt
+    else:
+        raise ValueError('{}: interp option not recognised'.format(interp))
+    im_clean = interp_func(im) / im_q
 
     ## Level Sets Calculation
     # calculate levels
@@ -54,7 +55,7 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99.):
     num_objs = []
     for lev in levels:
         # Threshold at level
-        bw = (im > lev)
+        bw = (im_clean > lev)
         # Morphological operations
         bw = ndimage.morphology.binary_dilation(bw, structure=dilate_mask)
         bw = ndimage.morphology.binary_erosion(bw, structure=erode_mask)
@@ -64,20 +65,49 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99.):
         if sum_vals == nlevels * num_objs[-1]:  # single pixel noise elimination
             sum_vals = 0
     measure_value = float(sum_vals) / (sum_notnull * nlevels)
-    return measure_value, im, levels, num_objs
+    return measure_value, im_clean, levels, num_objs
 
 
-def measure_of_chaos_dict(d, nRows, nColumns, nlevels=30, interp=False, q_val=99.):
-    """Applies :code:`measure_of_chaos` to an image given as a dictionary."""
-    if len(d) == 0:
-        raise Exception('Empty input dict!')
+def _interpolate(im, notnull_mask):
+    """
+    Use spline interpolation to fill in missing values.
 
-    max_key_val = nRows * nColumns - 1
-    iSize = nRows * nColumns
-    img = np.zeros((iSize, 1))
-    for i, v in d.iteritems():
-        if i < 0 or i > max_key_val:
-            raise Exception('Wrong key value in input dict: {}!'.format(i))
-        # if i >= 0 and i < iSize:
-        img[i] = v
-    return measure_of_chaos(np.reshape(img, (nRows, nColumns)), nlevels, interp, q_val)[0]
+    :param im: the entire image, including nan or zero values
+    :param notnull_mask: the indices array for the values greater than zero
+    :return: the interpolated array
+    """
+    im_size = im.shape
+    X, Y = np.meshgrid(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
+    f = interpolate.interp2d(X[notnull_mask], Y[notnull_mask], im[notnull_mask])
+    im = f(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
+    return im
+
+
+def _quantile_threshold(im, notnull_mask, q_val):
+    """
+    Set all values greater than the :code:`q_val`-th percentile to the :code:`q_val`-th percentile (i.e. flatten out
+    everything greater than the :code:`q_val`-th percentile).
+
+    :param im: the array to remove the hotspots from
+    :param q_val: percentile to use
+    :return: The :code:`q_val`-th percentile
+    """
+    im_q = np.percentile(im[notnull_mask], q_val)
+    im_rep = im > im_q
+    im[im_rep] = im_q
+    return im_q
+
+
+def _nan_to_zero(im):
+    """
+    Set all values to zero that are less than zero or nan; return the indices of all elements that are zero after
+    the modification (i.e. those that have been nan or smaller than or equal to zero before calling this function). The
+    returned boolean array has the same shape, True denotes that a value is zero now.
+
+    :param im: the array which nan-values will be set to zero in-place
+    :return: A boolean array of the same shape as :code:`im`
+    """
+    # Image properties
+    notnull = im > 0  # does not include nan values
+    im[~notnull] = 0
+    return notnull
