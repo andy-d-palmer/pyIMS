@@ -12,16 +12,17 @@ from pyIMS.ion_datacube import ion_datacube
 from pyimzml.ImzMLParser import ImzMLParser
 
 class inMemoryIMS():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm=''):
         file_size = os.path.getsize(filename)
-        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary)
+        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm)
 
-    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True):
+    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True,norm=[]):
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.file_dir, self.filename = os.path.split(filename)
         self.filename, self.file_type = os.path.splitext(self.filename)
         self.file_type = self.file_type.lower()
+        self.norm=norm
         if self.file_type == '.hdf5':
             self.hdf = h5py.File(filename, 'r')  # Readonly, file must exist
             if index_range == []:
@@ -129,6 +130,15 @@ class inMemoryIMS():
             this_spectrum = self.get_spectrum_imzml(index)
         elif self.file_type == '.hdf5':
             this_spectrum = self.get_spectrum_hdf5(index)
+        if self.norm != []:
+            mzs,counts = this_spectrum.get_spectrum(source="centroids")
+            if self.norm == 'TIC':
+                counts = counts / np.sum(counts)
+            elif self.norm == 'RMS':
+                counts = counts / np.sqrt(np.mean(np.square(counts)))
+            elif self.norm == 'MAD':
+                counts = counts/np.median(np.absolute(counts - np.mean(counts)))
+            this_spectrum.add_centroids(mzs,counts)
         return this_spectrum
 
 
