@@ -1,7 +1,6 @@
 import h5py
 import sys
 import numpy as np
-from pyMS.centroid_detection import gradient
 
 class slFile():
     def __init__(self,input_filename):
@@ -52,7 +51,7 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False,w
                import scipy.signal as signal
                #todo - add to processing list in imzml
                win = signal.hann(w_size)
-    	       intensities_sg = signal.fftconvolve(intensities, win, mode='same') / sum(win)
+    	       intensities = signal.fftconvolve(intensities, win, mode='same') / sum(win)
             mzs_c, intensities_c, _ = gradient(mzs, intensities)
             pos = coords[key]
             pos = (nrow - 1 - pos[1], pos[0], pos[2])
@@ -64,6 +63,7 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False,w
 
 
 def centroid_IMS(input_filename, output_filename,instrumentInfo={},sharedDataInfo={}):
+    from pyMS.centroid_detection import gradient
     # write out a IMS_centroid.hdf5 file
     sl = slFile(input_filename)
     n_total = np.shape(sl.spectra)[0]
