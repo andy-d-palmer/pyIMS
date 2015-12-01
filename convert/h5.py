@@ -4,42 +4,9 @@ import numpy as np
 
 from pyimzml.ImzMLWriter import ImzMLWriter
 
-def imzml(input_filename, output_filename,smoothMethod=[]):
-    h5 = h5py.File(input_filename)
-    g = h5['Spots/0/InitialMeasurement/']
-    mz_dtype = g['SamplePositions/SamplePositions'][:].dtype
-    int_dtype = g['Intensities'][:].dtype
-    with ImzMLWriter(output_filename, mz_dtype=mz_dtype, intensity_dtype=int_dtype) as imzml:
-        coords = np.asarray(h5['Registrations/0/Coordinates']).T.round(5)
-        coords -= np.amin(coords, axis=0)
-        step = np.array([np.mean(np.diff(np.unique(coords[:, i]))) for i in range(3)])
-        step[np.isnan(step)] = 1
-        coords /= np.reshape(step, (3,))
-        coords = coords.round().astype(int)
-        ncol, nrow, _ = np.amax(coords, axis=0) + 1
-        print 'dim: {} x {}'.format(nrow,ncol)
-        n_total = len(h5['Spots'].keys())
-        done = 0
-        keys = map(str, sorted(map(int, h5['Spots'].keys())))
-        for index, pos in zip(keys, coords):
-            g = h5['Spots/' + index + '/InitialMeasurement/']
-            mzs = np.asarray(g['SamplePositions/SamplePositions'][:])
-            intensities = np.asarray(g['Intensities'][:])
-            if smoothMethod != []:
-                intensities = smooth_spectrum(mzs,intensities,smoothMethod)
-            mzs_c, intensities_c, _ = (mzs, intensities)
-            pos = (nrow - 1 - pos[1], pos[0], pos[2])
-            imzml.addSpectrum(mzs_c, intensities_c, pos)
-            done += 1
-            if done % 1000 == 0:
-                print "[%s] progress: %.1f%%" % (input_filename, float(done) * 100.0 / n_total)
-        print "finished!"
-
-
-def centroid_imzml(input_filename, output_filename,smoothMethod="nosmooth"):
+def imzml(input_filename, output_filename,smoothMethod="nosmooth",centroid=False):
     import h5py
     import numpy as np
-    from pyMS import centroid_detection
     ### Open files
     h5 = h5py.File(input_filename, 'r')  # Readonly, file must exist
     ### get root groups from input data
@@ -76,25 +43,29 @@ def centroid_imzml(input_filename, output_filename,smoothMethod="nosmooth"):
             intensities = np.asarray(spot[spectraGroup]['Intensities'])
             if smoothMethod != []:
                     intensities = smooth_spectrum(mzs,intensities,smoothMethod)
-            mzs_c, intensities_c, _ = centroid_detection.gradient(mzs,intensities, max_output=-1, weighted_bins=3)
+            if centroid:
+                from pyMS import centroid_detection
+                mzs, intensities, _ = centroid_detection.gradient(mzs,intensities, max_output=-1, weighted_bins=3)
             # write to file
             pos = (nrow - 1 - pos[1], pos[0], pos[2])
-            imzml.addSpectrum(mzs_c, intensities_c, pos)
+            imzml.addSpectrum(mzs, intensities, pos)
             done += 1
             if done % 1000 == 0:
                 print "[%s] progress: %.1f%%" % (input_filename, float(done) * 100.0 / n_total)
     print "finished!"
 
-if __name__ == '__main__':
-    h5(sys.argv[1], sys.argv[1][:-3] + ".hdf5")
 
+def centroid_imzml(input_filename, output_filename,smoothMethod="nosmooth"):
+    raise NotImplementedError('Function removed: use h5.centroids(...centroid=True)')
 
 def smooth_spectrum(mzs,intensities,smoothMethod):
     import pyMS.smoothing as smoothing
-    if smoothMethod=='sg_smooth':
+    if smoothMethod == 'sg_smooth':
         intensities =  smoothing.sg_smooth(mzs,intensities,n_smooth=1)
-    elif smoothMethod=='apodization':
+    elif smoothMethod == 'apodization':
         intensities = smoothing.apodization(mzs,intensities,w_size=10)
+    elif smoothMethod == "rebin":
+        intensities = smoothing.rebin(mzs,intensities,delta_mz = 0.1)
     else:
         raise ValueError("method {} not known")
     return intensities
