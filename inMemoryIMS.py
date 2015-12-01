@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 sys.path.append('/Users/palmer/Documents/python_codebase/')
 from pyMS.mass_spectrum import mass_spectrum
 from pyIMS.ion_datacube import ion_datacube
-from pyimzml.ImzMLParser import ImzMLParser
 
 class inMemoryIMS():
     def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm=''):
@@ -30,6 +29,7 @@ class inMemoryIMS():
             else:
                 self.index_list = index_range
         elif self.file_type == '.imzml':
+            from pyimzml.ImzMLParser import ImzMLParser
             self.imzml = ImzMLParser(filename)
             self.index_list=range(0,len(self.imzml.coordinates))
         else:
