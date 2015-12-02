@@ -44,10 +44,11 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         interp_func = medfilt
     else:
         raise ValueError('{}: interp option not recognised'.format(interp))
-    im_clean = interp_func(im) / im_q
+    im_clean = interp_func(im) / im_q  # normalize to 1
 
     # Level Sets Calculation
-    return _level_sets(im_clean, nlevels, sum_notnull)
+    object_counts = _level_sets(im_clean, nlevels)
+    return _measure(object_counts, sum_notnull)
 
 
 def _nan_to_zero(im):
@@ -100,36 +101,50 @@ def _interpolate(im, notnull_mask):
     return im
 
 
-def _level_sets(im_clean, nlevels, sum_notnull):
+def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
+    dilate_mask = dilate_mask or [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+    erode_mask = erode_mask or [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
+
+
+def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     """
-    Calculate the level sets measure for given image.
+    Divide the image into level sets and count the number of objects in each of them.
 
     :param im_clean: 2d array with :code:`im_clean.max() == 1`
     :param int nlevels: number of levels to search for objects (positive integer)
-    :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
+    :param prep: callable that takes a 2d array as its only argument and returns a 2d array
     :return:
     """
-    sum_notnull = float(sum_notnull)
-    if not min(nlevels, sum_notnull) > 0:
-        raise ValueError("nlevels and sum_notnull must be positive")
+    if nlevels <= 0:
+        raise ValueError("nlevels must be positive")
+    prep = prep or (lambda x: x)  # if no preprocessing should be done, use the identity function
 
     # calculate levels
     levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
-    # hardcoded morphology masks
-    dilate_mask = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
-    erode_mask = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
     # Go through levels and calculate number of objects
     num_objs = []
     for lev in levels:
         # Threshold at level
         bw = (im_clean > lev)
-        # Morphological operations
-        bw = ndimage.morphology.binary_dilation(bw, structure=dilate_mask)
-        bw = ndimage.morphology.binary_erosion(bw, structure=erode_mask)
+        bw = prep(bw)
         # Record objects at this level
         num_objs.append(ndimage.label(bw)[1])  # second output is number of objects
+    return num_objs
+
+
+def _measure(num_objs, sum_notnull):
+    """
+    Calculate a statistic for the object counts.
+
+    :param num_objs: number of objects found in each level, respectively
+    :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
+    :return:
+    """
+    nlevels = len(num_objs)
+    sum_notnull = float(sum_notnull)
     sum_vals = np.sum(num_objs)
     if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
         sum_vals = 0
-    measure_value = float(sum_vals) / (sum_notnull * nlevels)
-    return measure_value, im_clean, levels, num_objs
+    measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
+    return measure_value
