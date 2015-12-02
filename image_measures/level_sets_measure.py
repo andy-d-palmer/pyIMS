@@ -28,6 +28,9 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         im = im.copy()
 
     notnull_mask = _nan_to_zero(im)
+    # TODO: remove this statement. Reasons:
+    #  - the interpolation afterwards might fill in values greater than 1 leading to a non-normalized array
+    #  - see function definition
     im_q = _quantile_threshold(im, notnull_mask, q_val)
 
     # interpolate to clean missing values
@@ -69,6 +72,7 @@ def _nan_to_zero(im):
     return notnull
 
 
+# TODO: Remove this function. Reason: this should happen outside of the algorithm if desired
 def _quantile_threshold(im, notnull_mask, q_val):
     """
     Set all values greater than the :code:`q_val`-th percentile to the :code:`q_val`-th percentile (i.e. flatten out
@@ -120,7 +124,16 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
         raise ValueError("nlevels must be positive")
     prep = prep or (lambda x: x)  # if no preprocessing should be done, use the identity function
 
-    # calculate levels
+    # TODO change the levels. Reason:
+    #  - in the for loop, the > operator is used. The highest level is 1, therefore the highest level set will always
+    #    be empty. The ndimage.label function then returns 1 as the number of objects in the empty image, although it
+    #    should be zero.
+    # Proposed solution:
+    # levels = np.linspace(0, 1, nlevels + 2)[1:-1]
+    # That is, create nlevels + 2 levels, then throw away the zero level and the one level
+    # or:
+    # levels = np.linspace(0, 1, nlevels)[1:-1]
+    # That is, only use nlevels - 2 levels. This means that the output array will have a size of nlevels - 2
     levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
@@ -141,9 +154,22 @@ def _measure(num_objs, sum_notnull):
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
     :return:
     """
+    num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
     sum_notnull = float(sum_notnull)
+    if sum_notnull <= 0:
+        raise ValueError("sum_notnull must be positive")
+    if min(num_objs) < 1:
+        raise ValueError("must have at least one object in each level")
+    if nlevels < 1:
+        raise ValueError("array of object counts is empty")
+
     sum_vals = np.sum(num_objs)
+    # TODO: delete the if statement. Reasons:
+    #  - the intention to ignore images with just a couple of noise pixels should be addressed at the very beginning
+    #    of the measure_of_chaos function
+    #  - it is buggy: the number of objects is not necessarily monotonic, e.g. [1, 3, 2] would get a score of 0
+    #    because its mean is equal to the last value just by coincidence
     if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
         sum_vals = 0
     measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)

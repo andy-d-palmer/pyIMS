@@ -1,9 +1,10 @@
+import itertools
 import unittest
 
 import numpy as np
 
 from ..image_measures.level_sets_measure import measure_of_chaos, _nan_to_zero, _quantile_threshold, _interpolate, \
-    _level_sets
+    _level_sets, _measure
 
 
 class MeasureOfChaosTest(unittest.TestCase):
@@ -81,7 +82,10 @@ class MeasureOfChaosTest(unittest.TestCase):
                 (np.arange(101, dtype=np.float32), np.ones(101, dtype=np.bool_), 100. / 3),
                 (np.concatenate((np.arange(34), np.repeat(100. / 3, 67))), 100. / 3),
             ),
-            ((np.arange(20), np.repeat([True, False], 10), 100), (np.concatenate((np.arange(10), np.repeat(9, 10))), 9)),
+            (
+                (np.arange(20), np.repeat([True, False], 10), 100),
+                (np.concatenate((np.arange(10), np.repeat(9, 10))), 9)
+            ),
         )
         for args, expected in test_cases:
             im_in = args[0]
@@ -111,9 +115,26 @@ class MeasureOfChaosTest(unittest.TestCase):
             np.testing.assert_array_equal(actual, expected)
 
     def test__measure_ValueError(self):
-        invalid_num_objs = ([], [-1], [2, -1], [2, -4, -1])
-        invalid_sum_notnulls = ()
+        invalid_num_objs = ([], [-1], [2, -1], [2, -4, -1], [0], [1, 2, 3, 0, 1, 2], [0.999, 20])
+        valid_num_objs = (range(5, 0, -1),)
+        invalid_sum_notnulls = (-2.7, -1, 0,)
+        valid_sum_notnulls = (15,)
+        invalid_combinations = itertools.chain(itertools.product(invalid_num_objs, valid_sum_notnulls),
+                                               itertools.product(valid_num_objs, invalid_sum_notnulls),
+                                               itertools.product(invalid_num_objs, invalid_sum_notnulls))
+        for num_objs, sum_notnull in invalid_combinations:
+            self.assertRaises(ValueError, _measure, num_objs, sum_notnull)
+        for num_objs, sum_notnull in itertools.product(valid_num_objs, valid_sum_notnulls):
+            _measure(num_objs, sum_notnull)
 
+    def test__measure_trivial(self):
+        test_cases = (
+            ((range(5), 1), 3),
+            ((np.nan, 1), np.nan),
+            ((range(5), np.nan), np.nan),
+            (([1.1, 2.2, 3.3], 1), 5. / 3),
+            ((range(5), .5), 6),
+        )
 
 
 def _make_level_sets_cases():
@@ -156,14 +177,15 @@ def _make_level_sets_cases():
         im = np.zeros((nlevels * 6 + 6, 7))
         for i in range(nlevels):
             r = 6 * i + 3
-            im[(r-1, r, r+1, r+1), (3, 3, 2, 4)] = 1 - float(i) / nlevels
+            im[(r - 1, r, r + 1, r + 1), (3, 3, 2, 4)] = 1 - float(i) / nlevels
         yield ((im, nlevels), np.arange(nlevels, 0, -1))
 
-    # case where an objects splits into two in the second level
+    # non-monotonic case where an objects splits into two in the second level and one of them disappears in the highest
+    # level
     im = np.zeros((9, 5))
     im[2, 1:4] = 1
     im[4, 1:4] = 0.4
-    im[6, 1:4] = 1
+    im[6, 1:4] = 0.6
     yield ((im, 3), [1, 2, 1])
 
 
