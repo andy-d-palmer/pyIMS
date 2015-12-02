@@ -2,7 +2,8 @@ import unittest
 
 import numpy as np
 
-from ..image_measures.level_sets_measure import measure_of_chaos, _nan_to_zero, _quantile_threshold
+from ..image_measures.level_sets_measure import measure_of_chaos, _nan_to_zero, _quantile_threshold, _interpolate, \
+    _level_sets
 
 
 class MeasureOfChaosTest(unittest.TestCase):
@@ -13,7 +14,7 @@ class MeasureOfChaosTest(unittest.TestCase):
         a[1, 0] = 0
         a[3:6, :] = 0
         a[6, :4] = 0
-        self.assertEqual(0.03625, measure_of_chaos(a, 200)[0])
+        self.assertEqual(1 - 0.03625, measure_of_chaos(a, 200))
 
     def test__nan_to_zero_with_ge_zero(self):
         ids = (
@@ -46,9 +47,9 @@ class MeasureOfChaosTest(unittest.TestCase):
             (np.array([-1, np.nan, 1e6, -1e6]), np.array([0, 0, 1e6, 0])),
             (np.arange(-2, 7).reshape((3, 3)), np.array([[0, 0, 0], np.arange(1, 4), np.arange(4, 7)])),
         )
-        for input, expected in test_cases:
-            _nan_to_zero(input)
-            np.testing.assert_array_equal(input, expected)
+        for input_, expected in test_cases:
+            _nan_to_zero(input_)
+            np.testing.assert_array_equal(input_, expected)
 
     def test__nan_to_zero_with_empty(self):
         in_ = None
@@ -89,7 +90,82 @@ class MeasureOfChaosTest(unittest.TestCase):
             self.assertAlmostEqual(q_expected, q_actual, delta=1e-7)
             np.testing.assert_array_almost_equal(im_in, im_expected, decimal=6)
 
+    def test__interpolate(self):
+        im_in = np.arange(900, dtype=np.float32).reshape((30, 30))
+        im_in[2, 3] = np.nan
+        notnull = im_in > 0
+
+        im_out = _interpolate(im_in, notnull)
+
+        np.testing.assert_array_almost_equal(im_in[notnull], im_out[notnull])
+        self.assertAlmostEqual(im_out[0, 0], 0)
+        self.assertAlmostEqual(im_out[2, 3], 63)
+
+    def test__level_sets_ValueError(self):
+        self.assertRaises(ValueError, _level_sets, np.arange(5), 0)
+
+    def test__level_sets(self):
+        test_cases = _make_level_sets_cases()
+        for args, expected in test_cases:
+            actual = _level_sets(*args)
+            np.testing.assert_array_equal(actual, expected)
+
+    def test__measure_ValueError(self):
+        invalid_num_objs = ([], [-1], [2, -1], [2, -4, -1])
+        invalid_sum_notnulls = ()
 
 
-        if __name__ == '__main__':
-            unittest.main()
+
+def _make_level_sets_cases():
+    nlevelss = (2, 5, 500)
+    # for each number of levels, insert one object per level into the matrix, such that it will be dilated to a 3x3
+    # square and then eroded to a single pixel
+    for nlevels in nlevelss:
+        # test only vertical extension:
+        # . . .
+        # 0 0 0
+        # 1 1 1
+        # 0 0 0
+        # . . .
+        im = np.zeros((nlevels * 4 + 3, 3))
+        for i in range(nlevels):
+            r = 4 * i + 1
+            im[(r, r, r), (0, 1, 2)] = 1 - float(i) / nlevels
+        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+
+        # test mainly vertical extension but surround with sufficient zeros
+        # . . . . .
+        # 0 0 0 0 0
+        # 0 1 1 1 0
+        # 0 0 0 0 0
+        # . . . . .
+        im = np.zeros((nlevels * 4 + 4, 7))
+        for i in range(nlevels):
+            r = 4 * i + 2
+            im[(r, r, r), (2, 3, 4)] = 1 - float(i) / nlevels
+        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+
+        # test both vertical and horizontal extension with surrounding zeros
+        # . . . . . . .
+        # 0 0 0 0 0 0 0
+        # 0 0 0 1 0 0 0
+        # 0 0 0 1 0 0 0
+        # 0 0 1 0 1 0 0
+        # 0 0 0 0 0 0 0
+        # . . . . . . .
+        im = np.zeros((nlevels * 6 + 6, 7))
+        for i in range(nlevels):
+            r = 6 * i + 3
+            im[(r-1, r, r+1, r+1), (3, 3, 2, 4)] = 1 - float(i) / nlevels
+        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+
+    # case where an objects splits into two in the second level
+    im = np.zeros((9, 5))
+    im[2, 1:4] = 1
+    im[4, 1:4] = 0.4
+    im[6, 1:4] = 1
+    yield ((im, 3), [1, 2, 1])
+
+
+if __name__ == '__main__':
+    unittest.main()
