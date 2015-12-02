@@ -32,7 +32,7 @@ class MeasureOfChaosTest(unittest.TestCase):
     def test__nan_to_zero_with_negatives(self):
         negs = (
             np.array([-1]),
-            np.array([np.nan])
+            np.array([np.nan]),
             - np.arange(1, 1024 * 1024 + 1).reshape((1024, 1024)),
             np.linspace(0, -20, 201)
         )
