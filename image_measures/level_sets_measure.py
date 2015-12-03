@@ -21,41 +21,46 @@ try:
 except (ImportError, AttributeError):
     opencv_found = False
 
-def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.): 
+
+def clean_image(im_clean,q_val,interp):
+    from scipy.signal import medfilt
+    import numpy as np
+    from scipy import interpolate
+
+    # Image properties
+    notnull=im_clean>0 #does not include nan values
+    im_clean[notnull==False]=0
+    im_size=np.shape(im_clean)
+    # hot spot removal (quantile threshold)
+    im_q = np.percentile(im_clean[notnull],q_val)
+    im_rep =  im_clean>im_q
+    im_clean[im_rep] = im_q
+    # interpolate to clean missing values
+    if any([interp == '', interp==False]):
+        #do nothing
+        im_clean=im_clean
+    elif interp == 'interpolate' or interp==True:        # interpolate to replace missing data - not always present
+        try:
+            # interpolate to replace missing data - not always present
+            X,Y=np.meshgrid(np.arange(0,im_size[1]),np.arange(0,im_size[0]))
+            f=interpolate.interp2d(X[notnull],Y[notnull],im_clean[notnull])
+            im_clean=f(np.arange(0,im_size[1]),np.arange(0,im_size[0]))
+        except:
+            print 'interp bail out'
+            im_clean = np.zeros(np.shape(im_clean)) # if interp fails, bail out
+    elif interp=='median':
+            im_clean = medfilt(im_clean)
+    else:
+        raise ValueError('{}: interp option not recognised'.format(interp))
+    # scale max to 1
+    im_clean = im_clean/im_q
+    return im_clean
+
+
+def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.,clean_im=True):
     global opencv_found
     import numpy as np
-    from scipy import ndimage, misc, ndarray, interpolate 
-    from scipy.signal import medfilt
-    
-    def clean_image(im_clean,interp):
-        # Image properties
-        notnull=im_clean>0 #does not include nan values
-        im_clean[notnull==False]=0
-        im_size=np.shape(im_clean)
-        # hot spot removal (quantile threshold)
-        im_q = np.percentile(im_clean[notnull],q_val)
-        im_rep =  im_clean>im_q       
-        im_clean[im_rep] = im_q 
-        # interpolate to clean missing values   
-        if interp == '' or interp==False:
-            #do nothing
-            im_clean=im_clean        
-        elif interp == 'interpolate' or interp==True:        # interpolate to replace missing data - not always present
-            try:
-                # interpolate to replace missing data - not always present
-                X,Y=np.meshgrid(np.arange(0,im_size[1]),np.arange(0,im_size[0]))
-                f=interpolate.interp2d(X[notnull],Y[notnull],im_clean[notnull])
-                im_clean=f(np.arange(0,im_size[1]),np.arange(0,im_size[0]))
-            except:
-                print 'interp bail out'                
-                im_clean = np.zeros(np.shape(im)) # if interp fails, bail out
-        elif interp=='median':
-                im_clean = medfilt(im_clean)
-        else:
-            raise ValueError('{}: interp option not recognised'.format(interp))
-        # scale max to 1
-        im_clean = im_clean/im_q 
-        return im_clean
+    from scipy import ndimage
 
     ## Image Pre-Processing
     # don't process empty images
@@ -65,7 +70,8 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
     #reject very sparse images
     if sum_notnull < 4:
         return np.nan,[],[],[]
-    im=clean_image(im,interp)
+    if clean_im: # should not be hidden in this funtion
+        im=clean_image(im,q_val,interp)
 
     ## Level Sets Calculation
     # calculate levels
@@ -94,7 +100,7 @@ def measure_of_chaos(im,nlevels,interp='interpolate',q_val = 99.):
 
     # Go through levels and calculate number of objects
     num_objs = [count_objects(im, level) for level in levels]
-    measure_value = float(np.sum(num_objs))/(sum_notnull*nlevels)
+    measure_value = 1.-float(np.sum(num_objs))/(sum_notnull*nlevels)
     return measure_value,im,levels,num_objs
 
 def measure_of_chaos_fit(im,nlevels,interp='interpolate',q_val = 99.): 
