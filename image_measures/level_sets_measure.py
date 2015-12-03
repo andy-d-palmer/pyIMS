@@ -22,7 +22,7 @@ except (ImportError, AttributeError):
     opencv_found = False
 
 
-def clean_image(im_clean,q_val,interp):
+def clean_image(im_clean,q_val,interp,do_hotspot=False):
     from scipy.signal import medfilt
     import numpy as np
     from scipy import interpolate
@@ -31,10 +31,11 @@ def clean_image(im_clean,q_val,interp):
     notnull=im_clean>0 #does not include nan values
     im_clean[notnull==False]=0
     im_size=np.shape(im_clean)
-    # hot spot removal (quantile threshold)
-    im_q = np.percentile(im_clean[notnull],q_val)
-    im_rep =  im_clean>im_q
-    im_clean[im_rep] = im_q
+    if do_hotspot:
+        # hot spot removal (quantile threshold)
+        im_q = np.percentile(im_clean[notnull],q_val)
+        im_rep =  im_clean>im_q
+        im_clean[im_rep] = im_q
     # interpolate to clean missing values
     if any([interp == '', interp==False]):
         #do nothing
@@ -53,7 +54,7 @@ def clean_image(im_clean,q_val,interp):
     else:
         raise ValueError('{}: interp option not recognised'.format(interp))
     # scale max to 1
-    im_clean = im_clean/im_q
+    im_clean /= np.max(im_clean)
     return im_clean
 
 
