@@ -53,6 +53,8 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         interp_func = medfilt
     else:
         raise ValueError('{}: interp option not recognised'.format(interp))
+    # TODO: divide by max(im) instead of im_q. Reason:
+    # After interpolating, there can be values > im_q
     im_clean = interp_func(im) / im_q  # normalize to 1
 
     # Level Sets Calculation

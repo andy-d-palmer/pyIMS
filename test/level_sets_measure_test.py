@@ -9,6 +9,7 @@ from ..image_measures.level_sets_measure import measure_of_chaos, _nan_to_zero, 
 
 class MeasureOfChaosTest(unittest.TestCase):
     def test_measure_of_chaos(self):
+        # Note: this test compares exact values and will fail when changing scientific details
         np.random.seed(0)
         a = np.random.normal(loc=0.5, scale=0.01, size=64).reshape((8, 8))
         a[0, :-1] = 0
