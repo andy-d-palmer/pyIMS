@@ -15,7 +15,7 @@ class MeasureOfChaosTest(unittest.TestCase):
         a[1, 0] = 0
         a[3:6, :] = 0
         a[6, :4] = 0
-        self.assertEqual(1 - 0.03625, measure_of_chaos(a, 200))
+        self.assertEqual(0.03625, measure_of_chaos(a, 200))
 
     def test_measure_of_chaos_ValueError(self):
         valid_ims = (np.ones((3, 3)),)

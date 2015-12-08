@@ -178,5 +178,6 @@ def _measure(num_objs, sum_notnull):
     #    because its mean is equal to the last value just by coincidence
     if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
         sum_vals = 0
-    measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
+    # TODO: use 1 - ... Reason: bigger is better
+    measure_value = float(sum_vals) / (sum_notnull * nlevels)
     return measure_value
