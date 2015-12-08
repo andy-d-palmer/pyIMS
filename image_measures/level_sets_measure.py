@@ -59,7 +59,8 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
 
     # Level Sets Calculation
     object_counts = _level_sets(im_clean, nlevels)
-    return _measure(object_counts, sum_notnull)
+    # TODO: return the plain value instead of a tuple
+    return _measure(object_counts, sum_notnull),
 
 
 def _nan_to_zero(im):
