@@ -17,6 +17,26 @@ class MeasureOfChaosTest(unittest.TestCase):
         a[6, :4] = 0
         self.assertEqual(1 - 0.03625, measure_of_chaos(a, 200))
 
+    def test_measure_of_chaos_ValueError(self):
+        valid_ims = (np.ones((3, 3)),)
+        valid_nlevelss = (4,)
+        valid_interps = (True,)
+        valid_q_vals = (99.,)
+        invalid_nlevelss = (0, -3)
+        invalid_interps = ('foo', 7)
+        invalid_q_vals = (-7, 108.3)
+        test_cases = itertools.chain(itertools.product(valid_ims, valid_nlevelss, valid_interps, invalid_q_vals),
+                                     itertools.product(valid_ims, valid_nlevelss, invalid_interps, valid_q_vals),
+                                     itertools.product(valid_ims, invalid_nlevelss, valid_interps, valid_q_vals))
+        for args in test_cases:
+            self.assertRaises(ValueError, measure_of_chaos, *args)
+
+    def test_measure_of_chaos_does_not_overwrite(self):
+        im_before = np.linspace(0, 1, 100).reshape((10, 10))
+        im_after = np.copy(im_before)
+        measure_of_chaos(im_after, 10, True, 50., overwrite=False)
+        np.testing.assert_array_equal(im_before, im_after)
+
     def test__nan_to_zero_with_ge_zero(self):
         ids = (
             np.zeros(1),

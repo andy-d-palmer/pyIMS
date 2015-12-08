@@ -7,13 +7,19 @@ from scipy.signal import medfilt
 
 def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=True):
     """
+    Compute a measure for the spatial chaos in given image using the level sets method.
 
-    :param im:
-    :param nlevels:
-    :param interp:
-    :param q_val:
+    :param im: 2d array
+    :param nlevels: how many levels to use
+    :type nlevels: int
+    :param interp: interpolation option to use before calculating the measure. None or False means no interpolation. 'interp' or True means spline interpolation. 'median' means median filter.
+    :param q_val: the percentile above which to flatten the image
+    :type q_val: float
     :param overwrite: Whether the input image can be overwritten to save memory
-    :return:
+    :type overwrite: bool
+    :return: the measured value
+    :rtype: float
+    :raises ValueError: if nlevels <= 0 or q_val is an invalid percentile or an unknown interp value is used
     """
     # don't process empty images
     if np.sum(im) == 0:
@@ -118,7 +124,7 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     :param im_clean: 2d array with :code:`im_clean.max() == 1`
     :param int nlevels: number of levels to search for objects (positive integer)
     :param prep: callable that takes a 2d array as its only argument and returns a 2d array
-    :return:
+    :return: sequence with the number of objects in each respective level
     """
     if nlevels <= 0:
         raise ValueError("nlevels must be positive")
@@ -152,7 +158,7 @@ def _measure(num_objs, sum_notnull):
 
     :param num_objs: number of objects found in each level, respectively
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
-    :return:
+    :return: the calculated value
     """
     num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
