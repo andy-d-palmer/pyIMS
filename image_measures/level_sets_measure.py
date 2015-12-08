@@ -34,10 +34,6 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         im = im.copy()
 
     notnull_mask = _nan_to_zero(im)
-    # TODO: remove this statement. Reasons:
-    #  - the interpolation afterwards might fill in values greater than 1 leading to a non-normalized array
-    #  - see function definition
-    im_q = _quantile_threshold(im, notnull_mask, q_val)
 
     # interpolate to clean missing values
     interp_func = None
@@ -53,9 +49,8 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         interp_func = medfilt
     else:
         raise ValueError('{}: interp option not recognised'.format(interp))
-    # TODO: divide by max(im) instead of im_q. Reason:
-    # After interpolating, there can be values > im_q
-    im_clean = interp_func(im) / im_q  # normalize to 1
+    im = interp_func(im)
+    im_clean = im / np.max(im)  # normalize to 1
 
     # Level Sets Calculation
     object_counts = _level_sets(im_clean, nlevels)
@@ -181,6 +176,5 @@ def _measure(num_objs, sum_notnull):
     #    because its mean is equal to the last value just by coincidence
     if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
         sum_vals = 0
-    # TODO: use 1 - ... Reason: bigger is better
-    measure_value = float(sum_vals) / (sum_notnull * nlevels)
+    measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
     return measure_value
