@@ -4,6 +4,15 @@ import numpy as np
 from scipy import ndimage, interpolate
 from scipy.signal import medfilt
 
+# try to use cv2 for faster image processing
+try:
+    import cv2
+
+    cv2.connectedComponents  # relatively recent addition, so check presence
+    opencv_found = True
+except (ImportError, AttributeError):
+    opencv_found = False
+
 
 def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=True):
     """
@@ -111,6 +120,10 @@ def _interpolate(im, notnull_mask):
 def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
     dilate_mask = dilate_mask or [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
     erode_mask = erode_mask or [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    if opencv_found:
+        cv2.dilate(im, dilate_mask)
+        cv2.erode(im, erode_mask)
+        return im
     return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
 
 
@@ -140,12 +153,13 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
+    count_func = (lambda im: cv2.connectedComponents(im)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
     for lev in levels:
         # Threshold at level
         bw = (im_clean > lev)
         bw = prep(bw)
         # Record objects at this level
-        num_objs.append(ndimage.label(bw)[1])  # second output is number of objects
+        num_objs.append(count_func(bw))
     return num_objs
 
 
