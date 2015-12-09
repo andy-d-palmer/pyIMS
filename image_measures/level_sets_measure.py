@@ -1,8 +1,10 @@
 from warnings import warn
 
 import numpy as np
-from scipy import ndimage, interpolate
+from scipy import ndimage
 from scipy.signal import medfilt
+
+from imutils import nan_to_zero, interpolate
 
 # try to use cv2 for faster image processing
 try:
@@ -42,7 +44,7 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         # don't modify original image, make a copy
         im = im.copy()
 
-    notnull_mask = _nan_to_zero(im)
+    notnull_mask = nan_to_zero(im)
 
     # interpolate to clean missing values
     interp_func = None
@@ -51,7 +53,7 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
     elif interp == 'interpolate' or interp is True:  # interpolate to replace missing data - not always present
         def interp_func(image):
             try:
-                return _interpolate(image, notnull_mask)
+                return interpolate(image, notnull_mask)
             except:
                 warn('interp bail out')
     elif interp == 'median':
@@ -64,57 +66,6 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
     # Level Sets Calculation
     object_counts = _level_sets(im_clean, nlevels)
     return _measure(object_counts, sum_notnull)
-
-
-def _nan_to_zero(im):
-    """
-    Set all values to zero that are less than zero or nan; return the indices of all elements that are zero after
-    the modification (i.e. those that have been nan or smaller than or equal to zero before calling this function). The
-    returned boolean array has the same shape, False denotes that a value is zero now.
-
-    :param im: the array which nan-values will be set to zero in-place
-    :return: A boolean array of the same shape as :code:`im`
-    """
-    if im is None:
-        raise AttributeError("im must be an array, not None")
-    notnull = im > 0  # does not include nan values
-    if notnull is True:
-        raise TypeError("im must be an array")
-    im[~notnull] = 0
-    return notnull
-
-
-# TODO: Remove this function. Reason: this should happen outside of the algorithm if desired
-def _quantile_threshold(im, notnull_mask, q_val):
-    """
-    Set all values greater than the :code:`q_val`-th percentile to the :code:`q_val`-th percentile (i.e. flatten out
-    everything greater than the :code:`q_val`-th percentile). For determining the percentile, only nonzero pixels are
-    taken into account, that is :code:`im[notnull_mask]`.
-
-    :param im: the array to remove the hotspots from
-    :param notnull_mask: index array for the values greater than zero
-    :param q_val: percentile to use
-    :return: The :code:`q_val`-th percentile
-    """
-    im_q = np.percentile(im[notnull_mask], q_val)
-    im_rep = im > im_q
-    im[im_rep] = im_q
-    return im_q
-
-
-def _interpolate(im, notnull_mask):
-    """
-    Use spline interpolation to fill in missing values.
-
-    :param im: the entire image, including nan or zero values
-    :param notnull_mask: index array for the values greater than zero
-    :return: the interpolated array
-    """
-    im_size = im.shape
-    X, Y = np.meshgrid(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
-    f = interpolate.interp2d(X[notnull_mask], Y[notnull_mask], im[notnull_mask])
-    im = f(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
-    return im
 
 
 def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
