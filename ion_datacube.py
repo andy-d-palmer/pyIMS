@@ -13,6 +13,8 @@ class ion_datacube():
             self.step_size = []
         else:
             self.step_size = step_size
+        self.n_im = 0
+
     def add_xic(self,xic,mz,tol):
         # add an eXtracted Ion Chromatogram to the datacube 
         if len(self.coords) != len(xic):    
@@ -20,11 +22,14 @@ class ion_datacube():
         self.xic.append(xic) # = np.concatenate((self.xic,xic),axis=1)
         self.mzs = np.concatenate((self.mzs,mz))
         self.tol = np.concatenate((self.tol,tol))
+        self.n_im+=1
 
     def remove_xic(self,mz):
         #remove an xic and related info
-        index_to_remove = self.mz.index(mz)
         raise NotImplementedError
+        index_to_remove = self.mz.index(mz)
+        self.n_im-=1
+
     def add_coords(self,coords):
         # record spatial co-ordinates for each spectrum
         # coords is a ix3 array with x,y,z coords
@@ -33,11 +38,13 @@ class ion_datacube():
         #    self.xic = np.zeros((len(coords),0))
         self.calculate_bounding_box()
         self.coord_to_index()
+
     def calculate_bounding_box(self):
         self.bounding_box=[]
         for ii in range(0,3):
             self.bounding_box.append(np.amin(self.coords[:,ii]))
             self.bounding_box.append(np.amax(self.coords[:,ii]))
+
     def coord_to_index(self,transform_type='reg_grid',params=()):
         # this function maps coords onto pixel indicies (assuming a grid defined by bounding box and transform type)
         # -implement methods such as interp onto grid spaced over coords
@@ -66,6 +73,7 @@ class ion_datacube():
             print 'transform type not recognised'
             raise ValueError
         self.pixel_indices = pixel_indices
+
     def xic_to_image(self,xic_index):
         xic = self.xic[xic_index]
         # turn xic into an image
