@@ -1,12 +1,10 @@
 import os
-import h5py
 import numpy as np
 import bisect
 import sys
 import matplotlib.pyplot as plt
 
 # import our MS libraries
-sys.path.append('/Users/palmer/Documents/python_codebase/')
 from pyMS.mass_spectrum import mass_spectrum
 from pyIMS.ion_datacube import ion_datacube
 
@@ -150,6 +148,7 @@ class inMemoryIMS():
         return this_spectrum
 
     def get_spectrum_hdf5(self, index):
+        import h5py
         this_spectrum = mass_spectrum()
         tmp_str = '/spectral_data/%d' % (index)
         try:
@@ -167,13 +166,17 @@ class inMemoryIMS():
             raise ValueError('No spectral data found in index {}'.format(index))
         return this_spectrum
 
-    def get_ion_image(self, mzs, tols, tol_type='ppm'):
+    def empty_datacube(self):
         data_out = ion_datacube()
         # add precomputed pixel indices
         data_out.coords = self.coords
         data_out.pixel_indices = self.cube_pixel_indices
         data_out.nRows = self.cube_n_row
         data_out.nColumns = self.cube_n_col
+        return data_out
+
+    def get_ion_image(self, mzs, tols, tol_type='ppm'):
+        data_out = self.empty_datacube()
 
         def search_sort(mzs,tols):
             data_out = blank_dataout()
