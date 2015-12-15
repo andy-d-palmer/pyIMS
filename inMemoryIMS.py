@@ -21,7 +21,8 @@ class inMemoryIMS():
         self.file_type = self.file_type.lower()
         self.norm=norm
         if self.file_type == '.hdf5':
-            self.hdf = h5py.File(filename, 'r')  # Readonly, file must exist
+            import h5py
+            self.hdf = h5py.File(filename, 'r')  # Readonly, fie must exist
             if index_range == []:
                 self.index_list = map(int, self.hdf['/spectral_data'].keys())
             else:
