@@ -1,10 +1,7 @@
-from warnings import warn
-
 import numpy as np
 from scipy import ndimage
-from scipy.signal import medfilt
 
-from imutils import nan_to_zero, interpolate
+from imutils import nan_to_zero
 
 # try to use cv2 for faster image processing
 try:
@@ -16,16 +13,13 @@ except (ImportError, AttributeError):
     opencv_found = False
 
 
-def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=True):
+def measure_of_chaos(im, nlevels, overwrite=True):
     """
     Compute a measure for the spatial chaos in given image using the level sets method.
 
     :param im: 2d array
     :param nlevels: how many levels to use
     :type nlevels: int
-    :param interp: interpolation option to use before calculating the measure. None or False means no interpolation. 'interp' or True means spline interpolation. 'median' means median filter.
-    :param q_val: the percentile above which to flatten the image
-    :type q_val: float
     :param overwrite: Whether the input image can be overwritten to save memory
     :type overwrite: bool
     :return: the measured value
@@ -45,22 +39,6 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
         im = im.copy()
 
     notnull_mask = nan_to_zero(im)
-
-    # interpolate to clean missing values
-    interp_func = None
-    if not interp:
-        interp_func = lambda x: x
-    elif interp == 'interpolate' or interp is True:  # interpolate to replace missing data - not always present
-        def interp_func(image):
-            try:
-                return interpolate(image, notnull_mask)
-            except:
-                warn('interp bail out')
-    elif interp == 'median':
-        interp_func = medfilt
-    else:
-        raise ValueError('{}: interp option not recognised'.format(interp))
-    im = interp_func(im)
     im_clean = im / np.max(im)  # normalize to 1
 
     # Level Sets Calculation
