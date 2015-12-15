@@ -61,8 +61,10 @@ class ImutilsTest(unittest.TestCase):
             (np.arange(0), np.arange(0, dtype=np.bool_), -4.4),
             (np.arange(0), np.arange(0, dtype=np.bool_), 101)
         )
+        kws = ('im', 'notnull_mask', 'q_val',)
         for args in test_cases:
-            self.assertRaises(ValueError, quantile_threshold, *args)
+            kwargs = {kw: val for kw, val in zip(kws, args)}
+            self.assertRaises(ValueError, quantile_threshold, **kwargs)
 
     def test_quantile_threshold_trivial(self):
         test_cases = (
@@ -76,10 +78,12 @@ class ImutilsTest(unittest.TestCase):
                 (np.concatenate((np.arange(10), np.repeat(9, 10))), 9)
             ),
         )
+        kws = ('im', 'notnull_mask', 'q_val',)
         for args, expected in test_cases:
+            kwargs = {kw: val for kw, val in zip(kws, args)}
             im_in = args[0]
             im_expected, q_expected = expected
-            q_actual = quantile_threshold(im_in, *args[1:])
+            q_actual = quantile_threshold(**kwargs)
             self.assertAlmostEqual(q_expected, q_actual, delta=1e-7)
             np.testing.assert_array_almost_equal(im_in, im_expected, decimal=6)
 
