@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from ..image_measures.level_sets_measure import measure_of_chaos, _level_sets, _measure
+from image_measures import measure_of_chaos, _level_sets, _measure
 
 
 class MeasureOfChaosTest(unittest.TestCase):
