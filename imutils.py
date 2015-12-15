@@ -20,31 +20,33 @@ def nan_to_zero(im):
     return notnull
 
 
-def quantile_threshold(im, notnull_mask, q_val):
+def quantile_threshold(im, q_val, notnull_mask=None):
     """
     Set all values greater than the :code:`q_val`-th percentile to the :code:`q_val`-th percentile (i.e. flatten out
     everything greater than the :code:`q_val`-th percentile). For determining the percentile, only nonzero pixels are
     taken into account, that is :code:`im[notnull_mask]`.
 
     :param im: the array to remove the hotspots from
-    :param notnull_mask: index array for the values greater than zero
     :param q_val: percentile to use
+    :param notnull_mask: index array for the values greater than zero. If None, no mask is used
     :return: The :code:`q_val`-th percentile
     """
+    notnull_mask = np.ones(np.shape(im)) if notnull_mask is None else notnull_mask
     im_q = np.percentile(im[notnull_mask], q_val)
     im_rep = im > im_q
     im[im_rep] = im_q
     return im_q
 
 
-def interpolate(im, notnull_mask):
+def interpolate(im, notnull_mask=None):
     """
     Use spline interpolation to fill in missing values.
 
     :param im: the entire image, including nan or zero values
-    :param notnull_mask: index array for the values greater than zero
+    :param notnull_mask: index array for the values greater than zero. If None, no mask is used
     :return: the interpolated array
     """
+    notnull_mask = np.ones(np.shape(im)) if notnull_mask is None else notnull_mask
     im_size = im.shape
     X, Y = np.meshgrid(np.arange(0, im_size[1]), np.arange(0, im_size[0]))
     f = interpolate_.interp2d(X[notnull_mask], Y[notnull_mask], im[notnull_mask])
