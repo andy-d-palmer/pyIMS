@@ -46,7 +46,7 @@ class IMSdataset():
     def get_ion_image(self, mz_list, tol_list, tol_type='mz', return_method='sum'):
         # todo - use tol_type and ensure tol is a vector
         # define mz ranges once
-        if tol_type == ppm:
+        if tol_type == "ppm":
             tol_list = [tol * mz / 1e6 for mz, tol, in zip(mz_list, tol_list)]
 
         mz_list_upper = np.zeros(np.shape(mz_list))
