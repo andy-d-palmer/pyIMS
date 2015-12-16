@@ -136,7 +136,7 @@ class MeasureOfChaosTest(unittest.TestCase):
             np.testing.assert_array_equal(actual, expected)
 
     def test__measure_ValueError(self):
-        invalid_num_objs = ([], [-1], [2, -1], [2, -4, -1], [0], [1, 2, 3, 0, 1, 2], [0.999, 20])
+        invalid_num_objs = ([], [-1], [2, -1], [2, -4, -1], [1, 2, 3, -1, 1, 2], [-0.001, 20])
         valid_num_objs = (range(5, 0, -1),)
         invalid_sum_notnulls = (-2.7, -1, 0,)
         valid_sum_notnulls = (15,)
@@ -173,7 +173,7 @@ def _make_level_sets_cases():
         for i in range(nlevels):
             r = 4 * i + 1
             im[(r, r, r), (0, 1, 2)] = 1 - float(i) / nlevels
-        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+        yield ((im, nlevels), np.concatenate((np.arange(nlevels, 1, -1), np.zeros(1))))
 
         # test mainly vertical extension but surround with sufficient zeros
         # . . . . .
@@ -185,7 +185,7 @@ def _make_level_sets_cases():
         for i in range(nlevels):
             r = 4 * i + 2
             im[(r, r, r), (2, 3, 4)] = 1 - float(i) / nlevels
-        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+        yield ((im, nlevels), np.concatenate((np.arange(nlevels, 1, -1), np.zeros(1))))
 
         # test both vertical and horizontal extension with surrounding zeros
         # . . . . . . .
@@ -199,7 +199,7 @@ def _make_level_sets_cases():
         for i in range(nlevels):
             r = 6 * i + 3
             im[(r - 1, r, r + 1, r + 1), (3, 3, 2, 4)] = 1 - float(i) / nlevels
-        yield ((im, nlevels), np.arange(nlevels, 0, -1))
+        yield ((im, nlevels), np.concatenate((np.arange(nlevels, 1, -1), np.zeros(1))))
 
     # non-monotonic case where an objects splits into two in the second level and one of them disappears in the highest
     # level
@@ -207,7 +207,7 @@ def _make_level_sets_cases():
     im[2, 1:4] = 1
     im[4, 1:4] = 0.4
     im[6, 1:4] = 0.6
-    yield ((im, 3), [1, 2, 1])
+    yield ((im, 3), [1, 2, 0])
 
 
 if __name__ == '__main__':

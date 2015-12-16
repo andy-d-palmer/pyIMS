@@ -163,16 +163,16 @@ def _measure(num_objs, sum_notnull):
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
     :return: the calculated value
     """
-    num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
-    sum_notnull = float(sum_notnull)
     if sum_notnull <= 0:
         raise ValueError("sum_notnull must be positive")
-    if min(num_objs) < 1:
-        raise ValueError("must have at least one object in each level")
+    if min(num_objs) < 0:
+        raise ValueError("cannot have negative object counts")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
 
+    num_objs = np.asarray(num_objs, dtype=np.int_)
+    sum_notnull = float(sum_notnull)
     sum_vals = np.sum(num_objs)
     # TODO: delete the if statement. Reasons:
     #  - the intention to ignore images with just a couple of noise pixels should be addressed at the very beginning
