@@ -1,5 +1,7 @@
 import numpy as np
+import scipy.stats
 from scipy import ndimage
+from scipy.optimize import curve_fit
 
 from imutils import nan_to_zero
 
@@ -13,7 +15,7 @@ except (ImportError, AttributeError):
     opencv_found = False
 
 
-def measure_of_chaos(im, nlevels, overwrite=True):
+def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
     """
     Compute a measure for the spatial chaos in given image using the level sets method.
 
@@ -26,6 +28,7 @@ def measure_of_chaos(im, nlevels, overwrite=True):
     :rtype: float
     :raises ValueError: if nlevels <= 0 or q_val is an invalid percentile or an unknown interp value is used
     """
+    statistic = statistic or _default_measure
     # don't process empty images
     if np.sum(im) == 0:
         return np.nan, [], [], []
@@ -43,7 +46,14 @@ def measure_of_chaos(im, nlevels, overwrite=True):
 
     # Level Sets Calculation
     object_counts = _level_sets(im_clean, nlevels)
-    return _measure(object_counts, sum_notnull)
+    return statistic(object_counts, sum_notnull)
+
+
+def measure_of_chaos_fit(im, nlevels, overwrite=True):
+    """
+    This funcition is identical to measure_of_chaos except that it uses a different statistic.
+    """
+    return measure_of_chaos(im, nlevels, overwrite=overwrite, statistic=_fit)
 
 
 def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
@@ -92,13 +102,13 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     return num_objs
 
 
-def _measure(num_objs, sum_notnull):
+def _default_measure(num_objs, sum_notnull):
     """
     Calculate a statistic for the object counts.
 
     :param num_objs: number of objects found in each level, respectively
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
-    :return: the calculated value
+    :return: the calculated value between 0 and 1, bigger is better
     """
     num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
@@ -113,6 +123,30 @@ def _measure(num_objs, sum_notnull):
     sum_vals = np.sum(num_objs)
     measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
     return measure_value
+
+
+def _fit(num_objs, _):
+    # TODO improve docstring
+    """
+    An alternative statistic for measure_of_chaos.
+    :param num_objs:
+    :param _:
+    :return:
+    """
+    # this updates the scoring function from the main algorithm.
+    nlevels = len(num_objs)
+
+    def func(x, a, b):
+        return scipy.stats.norm.cdf(x, loc=a, scale=b)
+
+    # measure_value, im, levels, num_objs = measure_of_chaos(im, nlevels)
+    # if measure_value == np.nan:  # if basic algorithm failed then we're going to fail here too
+    #     return np.nan
+    cdf_curve = np.cumsum(num_objs) / float(np.sum(num_objs))
+    popt, pcov = curve_fit(func, np.linspace(0, 1, nlevels), cdf_curve, p0=(0.5, 0.05))
+    pdf_fitted = func(np.linspace(0, 1, nlevels), popt[0], popt[1])
+    # return 1-np.sqrt(np.sum((pdf_fitted - cdf_curve)**2))
+    return 1 - np.sum(np.abs((pdf_fitted - cdf_curve)))
 
 
 def isotope_pattern_match(images_flat, theor_iso_intensities):

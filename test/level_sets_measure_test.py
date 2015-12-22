@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from image_measures import measure_of_chaos, _level_sets, _measure
+from image_measures import measure_of_chaos, _level_sets, _default_measure
 
 
 class MeasureOfChaosTest(unittest.TestCase):
@@ -48,9 +48,9 @@ class MeasureOfChaosTest(unittest.TestCase):
                                                itertools.product(valid_num_objs, invalid_sum_notnulls),
                                                itertools.product(invalid_num_objs, invalid_sum_notnulls))
         for num_objs, sum_notnull in invalid_combinations:
-            self.assertRaises(ValueError, _measure, num_objs, sum_notnull)
+            self.assertRaises(ValueError, _default_measure, num_objs, sum_notnull)
         for num_objs, sum_notnull in itertools.product(valid_num_objs, valid_sum_notnulls):
-            _measure(num_objs, sum_notnull)
+            _default_measure(num_objs, sum_notnull)
 
     def test__measure_trivial(self):
         test_cases = (
