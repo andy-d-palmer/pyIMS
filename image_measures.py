@@ -153,11 +153,21 @@ def isotope_pattern_match(images_flat, theor_iso_intensities):
     """
     This function calculates a match between a list of isotope ion images and a theoretical intensity vector.
 
-    :param images_flat: a sequence of 1d arrays of pixel intensities with shape (d1, d2) where d1 is the number of images and d2 is the number of pixels per image, i.e. :code:`images_flat[i]` is the i-th flattened image
+    :param images_flat: 2d array (or sequence of 1d arrays) of pixel intensities with shape (d1, d2) where d1 is the number of images and d2 is the number of pixels per image, i.e. :code:`images_flat[i]` is the i-th flattened image
     :param theor_iso_intensities: 1d array of theoretical isotope intensities with shape d1, i.e :code:`theor_iso_intensities[i]` is the theoretical isotope intensity corresponding to the i-th image
     :return: measure value between 0 and 1, bigger is better
     :rtype: float
     """
+    d1 = len(images_flat)
+    if d1 != len(theor_iso_intensities):
+        raise ValueError("amount of images and theoretical intensities must be equal")
+    if any(im.shape != images_flat[0].shape for im in images_flat):
+        raise ValueError("images are not equally sized")
+    if any(len(im.shape) != 1 for im in images_flat):
+        raise TypeError("images are not 1d")
+    if any(intensity < 0 for intensity in theor_iso_intensities):
+        raise ValueError("intensities must be >= 0")
+
     image_ints = []
     not_null = images_flat[0] > 0
     for ii, _ in enumerate(theor_iso_intensities):
@@ -173,11 +183,10 @@ def isotope_image_correlation(images_flat, weights=None):
     """
     Function for calculating a weighted average measure of image correlation with the principle image.
 
-    :param images_flat: sequence of 1d arrays of pixel intensities
-    :param weights: weighting to put on each im
+    :param images_flat: 2d array (or sequence of 1d arrays) of pixel intensities with shape (d1, d2) where d1 is the number of images and d2 is the number of pixels per image, i.e. :code:`images_flat[i]` is the i-th flattened image
+    :param weights: 1d array of weights with shape d1, i.e :code:`weights[i]` is the weight to put on the i-th image. If omitted, all images are weighted equally
     :return: measure_value
     """
-
     if len(images_flat) < 2:
         return 0
     else:
