@@ -20,6 +20,16 @@ class MeasureOfChaosTest(unittest.TestCase):
         measure_of_chaos(im_after, 10, overwrite=False)
         np.testing.assert_array_equal(im_before, im_after)
 
+    def test_measure_of_chaos_NaN(self):
+        test_cases = (
+            (np.zeros((5, 5)), 10),
+            (np.arange(-4, 0).reshape((2, 2))),
+            (np.arange(-4, 4).reshape((2, 4))),
+            (np.arange(4).reshape((2, 2))),
+        )
+        for args in test_cases:
+            self.assertIs(measure_of_chaos(*args), np.nan)
+
     def test__level_sets_ValueError(self):
         self.assertRaises(ValueError, _level_sets, np.arange(5), 0)
 
@@ -44,12 +54,11 @@ class MeasureOfChaosTest(unittest.TestCase):
 
     def test__measure_trivial(self):
         test_cases = (
-            ((range(5), 1), 3),
-            ((np.nan, 1), np.nan),
-            ((range(5), np.nan), np.nan),
-            (([1.1, 2.2, 3.3], 1), 5. / 3),
-            ((range(5), .5), 6),
+            ((range(5), 5), 0.6),
+            (([1.1, 2.2, 3.3], 3), 0.3333333333333333),
         )
+        for args, expected in test_cases:
+            self.assertAlmostEqual(_default_measure(*args), expected, delta=1e-8)
 
 
 def _make_level_sets_cases():

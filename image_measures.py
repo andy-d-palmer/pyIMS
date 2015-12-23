@@ -34,11 +34,11 @@ def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
     statistic = statistic or _default_measure
     # don't process empty images
     if np.sum(im) == 0:
-        return np.nan, [], [], []
+        return np.nan
     sum_notnull = np.sum(im > 0)
     # reject very sparse images
     if sum_notnull < 4:
-        return np.nan, [], [], []
+        return np.nan
 
     if not overwrite:
         # don't modify original image, make a copy
