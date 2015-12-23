@@ -24,6 +24,9 @@ def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
     :type nlevels: int
     :param overwrite: Whether the input image can be overwritten to save memory
     :type overwrite: bool
+    :param statistic: callable that calculates a score (a number) for the object counts in the level sets. If
+    specified, this statistic will be used instead of the default one. The callable must take two arguments - the
+    object counts (sequence of ints) and the number of non-zero pixels in the original image (int) - and output a number
     :return: the measured value
     :rtype: float
     :raises ValueError: if nlevels <= 0 or q_val is an invalid percentile or an unknown interp value is used
@@ -51,7 +54,7 @@ def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
 
 def measure_of_chaos_fit(im, nlevels, overwrite=True):
     """
-    This funcition is identical to measure_of_chaos except that it uses a different statistic.
+    This function is identical to measure_of_chaos except that it uses a different statistic.
     """
     return measure_of_chaos(im, nlevels, overwrite=overwrite, statistic=_fit)
 
@@ -125,23 +128,20 @@ def _default_measure(num_objs, sum_notnull):
     return measure_value
 
 
+# this updates the scoring function from the main algorithm.
 def _fit(num_objs, _):
-    # TODO improve docstring
     """
     An alternative statistic for measure_of_chaos.
-    :param num_objs:
-    :param _:
-    :return:
+
+    :param num_objs: number of objects found in each level, respectively
+    :param _: unused dummy parameter, kept for signature compatibility with _default_measure
+    :return: the calculated value
     """
-    # this updates the scoring function from the main algorithm.
     nlevels = len(num_objs)
 
     def func(x, a, b):
         return scipy.stats.norm.cdf(x, loc=a, scale=b)
 
-    # measure_value, im, levels, num_objs = measure_of_chaos(im, nlevels)
-    # if measure_value == np.nan:  # if basic algorithm failed then we're going to fail here too
-    #     return np.nan
     cdf_curve = np.cumsum(num_objs) / float(np.sum(num_objs))
     popt, pcov = curve_fit(func, np.linspace(0, 1, nlevels), cdf_curve, p0=(0.5, 0.05))
     pdf_fitted = func(np.linspace(0, 1, nlevels), popt[0], popt[1])
