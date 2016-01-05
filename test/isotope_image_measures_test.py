@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from image_measures import isotope_pattern_match
+from image_measures import isotope_pattern_match, isotope_image_correlation
 
 
 class IsotopePatternMatchTest(TestCase):
@@ -21,7 +21,8 @@ class IsotopePatternMatchTest(TestCase):
             (np.ones(5), np.ones(5)),
             (np.ones((3, 3)), []),
             ([[]], []),
-            (np.arange(2 * 2 * 2).reshape((2, 2, 2)), [0.2] * 2)
+            (np.arange(2 * 2 * 2).reshape((2, 2, 2)), [0.2] * 2),
+            ([[], [1]], [1, 1]),
         )
         for args in inputs:
             self.assertRaises(Exception, isotope_pattern_match, *args)
@@ -55,3 +56,58 @@ class IsotopePatternMatchTest(TestCase):
             list_im_in = list(im_in)
             self.assertAlmostEqual(isotope_pattern_match(arr_im_in, ints_in), expected, delta=1e-8)
             self.assertAlmostEqual(isotope_pattern_match(list_im_in, ints_in), expected, delta=1e-8)
+
+
+class TestIsotopeImageCorrelation(TestCase):
+    def test_returns_zero_for_small_inputs(self):
+        inputs = (
+            ([],),
+            ([], np.arange(10)),
+            ([np.arange(10)],),
+            ([np.arange(10)], np.arange(10)),
+        )
+        for input_ in inputs:
+            self.assertEqual(isotope_image_correlation(*input_), 0)
+
+    def test_weights_defaults_to_ones(self):
+        np.random.seed(0)
+        inputs = np.random.random((10, 5, 100))
+        for im in inputs:
+            self.assertEqual(isotope_image_correlation(im), isotope_image_correlation(im, weights=np.ones(4)))
+
+    def test_raises_if_images_are_not_1d(self):
+        inputs = (
+            [1, 2, 3],  # 0d
+            np.arange(5 * 5 * 5).reshape((5, 5, 5)),  # 2d
+        )
+        for input_ in inputs:
+            self.assertRaises(TypeError, isotope_image_correlation, input_)
+
+    def test_raises_on_misaligned_image_shapes(self):
+        inputs = (
+            [[], [1]],
+            [np.arange(100), np.arange(100), np.arange(100), np.arange(99)]
+        )
+        for input_ in inputs:
+            self.assertRaises(Exception, isotope_image_correlation, input_)
+
+    def test_raises_on_wrong_number_of_weights(self):
+        inputs = (
+            (np.arange(5 * 25).reshape(5, 25), np.ones(5)),
+            (np.arange(5 * 25).reshape(5, 25), []),
+        )
+        for input_ in inputs:
+            self.assertRaises(ValueError, isotope_image_correlation, *input_)
+
+    def test_trivial_cases(self):
+        test_cases = (
+            ({'images_flat': [np.linspace(0, 1, 100), np.linspace(0, 1, 100)]}, 1),
+            ({'images_flat': [np.linspace(0, 5, 10), np.linspace(0, 1, 10), np.linspace(0, 0.01, 10)],
+              'weights': [5, 0.1]}, 1),
+            ({'images_flat': [np.linspace(0, 1, 100000), np.linspace(0, 1, 100000) ** 2,
+                              np.linspace(0, 1, 100000) ** 3]}, 0.942379675),
+            ({'images_flat': [np.linspace(0, 1, 100000), np.linspace(0, 1, 100000) ** 2,
+                              np.linspace(0, 1, 100000) ** 3], 'weights': [2, 1]}, 0.9510015266666666)
+        )
+        for input_, expected in test_cases:
+            self.assertAlmostEqual(isotope_image_correlation(**input_), expected)
