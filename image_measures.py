@@ -113,19 +113,18 @@ def _default_measure(num_objs, sum_notnull):
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
     :return: the calculated value between 0 and 1, bigger is better
     """
+    num_objs = np.asarray(num_objs, dtype=np.int_)
+    if np.unique(num_objs).shape[0] <= 1:
+        return np.nan
+
     nlevels = len(num_objs)
-    if sum_notnull <= 0:
-        raise ValueError("sum_notnull must be positive")
     if min(num_objs) < 0:
         raise ValueError("cannot have negative object counts")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
 
-    num_objs = np.asarray(num_objs, dtype=np.int_)
-    sum_notnull = float(sum_notnull)
-    sum_vals = np.sum(num_objs)
-    measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
-    return measure_value
+    sum_vals = float(np.sum(num_objs))
+    return 1 - sum_vals / (sum_notnull * nlevels)
 
 
 # this updates the scoring function from the main algorithm.
