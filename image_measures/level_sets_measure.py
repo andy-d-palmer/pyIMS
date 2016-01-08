@@ -23,11 +23,11 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
     """
     # don't process empty images
     if np.sum(im) == 0:
-        return np.nan, [], [], []
+        return np.nan  #, [], [], []
     sum_notnull = np.sum(im > 0)
     # reject very sparse images
     if sum_notnull < 4:
-        return np.nan, [], [], []
+        return np.nan  #, [], [], []
 
     if not overwrite:
         # don't modify original image, make a copy
@@ -60,7 +60,7 @@ def measure_of_chaos(im, nlevels, interp='interpolate', q_val=99., overwrite=Tru
     # Level Sets Calculation
     object_counts = _level_sets(im_clean, nlevels)
     # TODO: return the plain value instead of a tuple
-    return _measure(object_counts, sum_notnull),
+    return _measure(object_counts, sum_notnull)
 
 
 def _nan_to_zero(im):
@@ -163,12 +163,15 @@ def _measure(num_objs, sum_notnull):
     :param float sum_notnull: sum of all non-zero elements in the original array (positive number)
     :return: the calculated value
     """
+    if np.unique(num_objs).shape[0] < 2:
+        return np.nan
+
     num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
     sum_notnull = float(sum_notnull)
     if sum_notnull <= 0:
         raise ValueError("sum_notnull must be positive")
-    if min(num_objs) < 1:
+    if min(num_objs) < 0:
         raise ValueError("must have at least one object in each level")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
@@ -181,6 +184,5 @@ def _measure(num_objs, sum_notnull):
     #    because its mean is equal to the last value just by coincidence
     if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
         sum_vals = 0
-    # TODO: use 1 - ... Reason: bigger is better
-    measure_value = float(sum_vals) / (sum_notnull * nlevels)
+    measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
     return measure_value
