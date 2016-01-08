@@ -172,12 +172,5 @@ def _measure(num_objs, sum_notnull):
         raise ValueError("array of object counts is empty")
 
     sum_vals = np.sum(num_objs)
-    # TODO: delete the if statement. Reasons:
-    #  - the intention to ignore images with just a couple of noise pixels should be addressed at the very beginning
-    #    of the measure_of_chaos function
-    #  - it is buggy: the number of objects is not necessarily monotonic, e.g. [1, 3, 2] would get a score of 0
-    #    because its mean is equal to the last value just by coincidence
-    if sum_vals == nlevels * num_objs[-1]:  # all objects are in the highest level
-        sum_vals = 0
     measure_value = 1 - float(sum_vals) / (sum_notnull * nlevels)
     return measure_value
