@@ -4,7 +4,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.signal import medfilt
 
-from imutils import nan_to_zero, interpolate
+from ..imutils import nan_to_zero, interpolate
 
 # try to use cv2 for faster image processing
 try:
