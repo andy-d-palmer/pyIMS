@@ -4,7 +4,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.signal import medfilt
 
-from ..imutils import nan_to_zero, interpolate
+from imutils import nan_to_zero, interpolate
 
 # try to use cv2 for faster image processing
 try:
@@ -153,7 +153,7 @@ def isotope_pattern_match(images_flat, theor_iso_intensities):
     image_ints = []
     not_null = images_flat[0] > 0
     for ii, _ in enumerate(theor_iso_intensities):
-        image_ints.append(np.sum(images_flat[ii, not_null]))
+        image_ints.append(np.sum(images_flat[ii][not_null]))
     pattern_match = 1 - np.mean(abs(theor_iso_intensities / np.linalg.norm(theor_iso_intensities) -
                                     image_ints / np.linalg.norm(image_ints)))
     if pattern_match == 1.:
