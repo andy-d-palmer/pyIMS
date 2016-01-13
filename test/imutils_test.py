@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from imutils import nan_to_zero, quantile_threshold, interpolate
+from ..imutils import nan_to_zero, quantile_threshold, interpolate
 
 
 class ImutilsTest(unittest.TestCase):
