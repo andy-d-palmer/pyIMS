@@ -136,11 +136,22 @@ def _fit(num_objs, _):
     :param _: unused dummy parameter, kept for signature compatibility with _default_measure
     :return: the calculated value
     """
+    if np.unique(num_objs).shape[0] < 2:
+        return np.nan
+
+    num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
+    if min(num_objs) < 0:
+        raise ValueError("must have at least one object in each level")
+    if nlevels < 1:
+        raise ValueError("array of object counts is empty")
 
     def func(x, a, b):
         return scipy.stats.norm.cdf(x, loc=a, scale=b)
 
+    # measure_value, im, levels, num_objs = measure_of_chaos(im, nlevels)
+    # if measure_value == np.nan:  # if basic algorithm failed then we're going to fail here too
+    #     return np.nan
     cdf_curve = np.cumsum(num_objs) / float(np.sum(num_objs))
     popt, pcov = curve_fit(func, np.linspace(0, 1, nlevels), cdf_curve, p0=(0.5, 0.05))
     pdf_fitted = func(np.linspace(0, 1, nlevels), popt[0], popt[1])
