@@ -63,8 +63,9 @@ def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
     dilate_mask = dilate_mask or [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
     erode_mask = erode_mask or [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
     if opencv_found:
-        cv2.dilate(im, dilate_mask)
-        cv2.erode(im, erode_mask)
+        im = np.asarray(im, dtype=np.uint8)
+        cv2.dilate(im, np.asarray(dilate_mask, dtype=np.uint8))
+        cv2.erode(im, np.asarray(erode_mask, dtype=np.uint8))
         return im
     return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
 
