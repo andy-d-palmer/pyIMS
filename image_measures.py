@@ -64,8 +64,8 @@ def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
     erode_mask = erode_mask or [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
     if opencv_found:
         im = np.asarray(im, dtype=np.uint8)
-        cv2.dilate(im, np.asarray(dilate_mask, dtype=np.uint8))
-        cv2.erode(im, np.asarray(erode_mask, dtype=np.uint8))
+        im = cv2.dilate(im, np.asarray(dilate_mask, dtype=np.uint8))
+        im = cv2.erode(im, np.asarray(erode_mask, dtype=np.uint8))
         return im
     return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
 
@@ -96,7 +96,7 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
-    count_func = (lambda im: cv2.connectedComponents(im)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
+    count_func = (lambda im: cv2.connectedComponents(im, connectivity=4)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
     for lev in levels:
         # Threshold at level
         bw = (im_clean > lev)
