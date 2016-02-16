@@ -1,4 +1,4 @@
-# README #
+# README [![Documentation Status](https://readthedocs.org/projects/pyims/badge/?version=latest)](http://pyims.readthedocs.org/en/latest/?badge=latest)#
 
 This repository contains the Python library for processing individual mass spectra.
 
