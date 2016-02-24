@@ -2,14 +2,14 @@ import os
 import numpy as np
 import bisect
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # import our MS libraries
 from pyMS.mass_spectrum import mass_spectrum
 from pyIMS.ion_datacube import ion_datacube
 
 class inMemoryIMS():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm=''):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none'):
         file_size = os.path.getsize(filename)
         self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm)
 
@@ -130,14 +130,15 @@ class inMemoryIMS():
         elif self.file_type == '.hdf5':
             this_spectrum = self.get_spectrum_hdf5(index)
         if self.norm != []:
-            mzs,counts = this_spectrum.get_spectrum(source="centroids")
-            if self.norm == 'TIC':
-                counts = counts / np.sum(counts)
-            elif self.norm == 'RMS':
-                counts = counts / np.sqrt(np.mean(np.square(counts)))
-            elif self.norm == 'MAD':
-                counts = counts/np.median(np.absolute(counts - np.mean(counts)))
-            this_spectrum.add_centroids(mzs,counts)
+            this_spectrum.normalise_spectrum(method=self.norm)
+            #mzs,counts = this_spectrum.get_spectrum(source="centroids")
+            #if self.norm == 'TIC':
+            #    counts = counts / np.sum(counts)
+            #elif self.norm == 'RMS':
+            #    counts = counts / np.sqrt(np.mean(np.square(counts)))
+            #elif self.norm == 'MAD':
+            #    counts = counts/np.median(np.absolute(counts - np.mean(counts)))
+            #this_spectrum.add_centroids(mzs,counts)
         return this_spectrum
 
 
@@ -282,11 +283,12 @@ class inMemoryIMS():
 
     def get_summary_image(self,summary_func='tic'):
         if summary_func not in ['tic','mic']: raise KeyError("requested type not in 'tic' mic'")
-        data_out = ion_datacube()
+        #data_out = ion_datacube()
         # add precomputed pixel indices
-        data_out.coords = self.coords
-        data_out.pixel_indices = self.cube_pixel_indices
-        data_out.nRows = self.cube_n_row
-        data_out.nColumns = self.cube_n_col
-        data_out.add_xic(np.asarray(getattr(self, summary_func))[self.index_list], [0], [0])
+        #data_out.coords = self.coords
+        #data_out.pixel_indices = self.cube_pixel_indices
+        #data_out.nRows = self.cube_n_row
+        #data_out.nColumns = self.cube_n_col
+        data_out=self.empty_datacube()
+        data_out.add_xic(np.asarray(getattr(self, summary_func)), [0], [0])
         return data_out
