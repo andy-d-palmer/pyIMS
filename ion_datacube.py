@@ -1,6 +1,4 @@
-import h5py
 import numpy as np
-from pyMS.mass_spectrum import mass_spectrum
 class ion_datacube():
     # a class for holding a datacube from an MSI dataset and producing ion images
     def __init__(self,step_size=[]): # define mandatory parameters (todo- validator to check all present)
@@ -93,3 +91,22 @@ class ion_datacube():
         im = np.reshape(im,self.nRows*self.nColumns)
         xic = im[self.pixel_indices]
         return xic
+
+
+    def apply_image_processing(self, smooth_method, **smooth_params):
+        """
+        Function to apply pre-defined image processing methods to ion_datacube
+        #todo: expose parameters in config
+        :param ion_datacube:
+            object from pyIMS.ion_datacube already containing images
+        :return:
+            ion_datacube is updated in place.
+            None returned
+        """
+        from pyIMS import smoothing
+        for ii in range(self.n_im):
+            im = self.xic_to_image(ii)
+            #todo: for method in smoothing_methods:
+            methodToCall = getattr(smoothing,smooth_method)
+            im_s = methodToCall(im,**smooth_params)
+            self.xic[ii] = self.image_to_xic(im_s)
