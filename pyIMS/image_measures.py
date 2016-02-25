@@ -115,14 +115,15 @@ def _default_measure(num_objs, sum_notnull):
     :return: the calculated value between 0 and 1, bigger is better
     """
     num_objs = np.asarray(num_objs, dtype=np.int_)
-    if np.unique(num_objs).shape[0] <= 1:
-        return np.nan
-
     nlevels = len(num_objs)
+    if sum_notnull <= 0:
+        raise ValueError("sum_notnull must be positive")
     if min(num_objs) < 0:
         raise ValueError("cannot have negative object counts")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
+    if np.unique(num_objs).shape[0] <= 1:
+        return np.nan
 
     sum_vals = float(np.sum(num_objs))
     return 1 - sum_vals / (sum_notnull * nlevels)
@@ -137,15 +138,14 @@ def _fit(num_objs, _):
     :param _: unused dummy parameter, kept for signature compatibility with _default_measure
     :return: the calculated value
     """
-    if np.unique(num_objs).shape[0] < 2:
-        return np.nan
-
     num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
     if min(num_objs) < 0:
         raise ValueError("must have at least one object in each level")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
+    if np.unique(num_objs).shape[0] < 2:
+        return np.nan
 
     def func(x, a, b):
         return scipy.stats.norm.cdf(x, loc=a, scale=b)

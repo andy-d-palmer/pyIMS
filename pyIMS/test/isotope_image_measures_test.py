@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from image_measures import isotope_pattern_match, isotope_image_correlation
+from ..image_measures import isotope_pattern_match, isotope_image_correlation
 
 
 class IsotopePatternMatchTest(TestCase):
