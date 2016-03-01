@@ -111,3 +111,13 @@ class TestIsotopeImageCorrelation(TestCase):
         )
         for input_, expected in test_cases:
             self.assertAlmostEqual(isotope_image_correlation(**input_), expected)
+
+    def test_empty_image_handling(self):
+        # adding an empty image with zero weight shouldn't influence the results
+        input_ = [np.arange(1000), np.random.normal(size=1000), np.random.normal(size=1000)]
+        weights = [1.0, 0.5]
+        expected = isotope_image_correlation(input_, weights)
+        input_ = input_ + [np.zeros(1000)]
+        weights = weights + [0.0]
+        result = isotope_image_correlation(input_, weights)
+        self.assertAlmostEqual(expected, result)

@@ -210,7 +210,7 @@ def isotope_image_correlation(images_flat, weights=None):
         # slightly faster to compute all correlations and pull the elements needed
         iso_correlation = np.corrcoef(images_flat)[1:, 0]
         # when all values are the same (e.g. zeros) then correlation is undefined
-        iso_correlation[np.isinf(iso_correlation)] = 0
+        iso_correlation[np.isinf(iso_correlation) | np.isnan(iso_correlation)] = 0
         try:
             return np.average(iso_correlation, weights=weights)
         except TypeError:
