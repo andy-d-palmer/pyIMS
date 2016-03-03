@@ -5,7 +5,7 @@ from shutil import copyfile
 curdir = abspath(dirname(__file__))
 rootdir = dirname(curdir)
 apidoc_cmd = 'sphinx-apidoc'
-apidoc_exclusions = join(rootdir, 'pyIMS', 'test')
+apidoc_exclusions = join(rootdir, 'pyImagingMSpec', 'test')
 apidoc_params = '-f -o {} {} {}'.format(curdir, rootdir, apidoc_exclusions)
 
 

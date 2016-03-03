@@ -21,10 +21,10 @@ from recommonmark.parser import CommonMarkParser
 sys.path.extend(['.', '..'])
 
 import rtd_gen_docs
-from pyIMS import __version__
+from pyImagingMSpec import __version__
 
-pkg_name = u'pyIMS'
-pkg_name_lowercase = u'pyims'
+pkg_name = u'pyImagingMSpec'
+pkg_name_lowercase = u'pyimagingmspec'
 rtd_gen_docs.main()
 
 # see http://www.sphinx-doc.org/en/stable/ext/autodoc.html#confval-autodoc_mock_imports

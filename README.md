@@ -1,8 +1,8 @@
-# README [![Documentation Status](https://readthedocs.org/projects/pyims/badge/?version=latest)](http://pyims.readthedocs.org/en/latest/?badge=latest)#
+# README [![Documentation Status](https://readthedocs.org/projects/pyimagingmspec/badge/?version=latest)](http://pyimagingmspec.readthedocs.org/en/latest/?badge=latest)#
 
 This repository contains a Python library for processing imaging mass spectrometry data.
 
-See the documentation on [readthedocs](http://pyms.readthedocs.org/en/latest/pyIMS.html)
+See the documentation on [readthedocs](http://pyimagingmspec.readthedocs.org/en/latest/pyImagingMSpec.html)
 
 # Installation
 
@@ -14,7 +14,7 @@ See the documentation on [readthedocs](http://pyms.readthedocs.org/en/latest/pyI
    
 * install this branch with pip
 ```
-sudo pip install git+https://github.com/alexandrovteam/pyIMS@adp
+sudo pip install git+https://github.com/alexandrovteam/pyImagingMSpec@adp
 ```
 # Package Contents
 

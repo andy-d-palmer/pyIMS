@@ -100,12 +100,12 @@ class ion_datacube():
         Function to apply pre-defined image processing methods to ion_datacube
         #todo: expose parameters in config
         :param ion_datacube:
-            object from pyIMS.ion_datacube already containing images
+            object from pyImagingMSpec.ion_datacube already containing images
         :return:
             ion_datacube is updated in place.
             None returned
         """
-        from pyIMS import smoothing
+        from pyImagingMSpec import smoothing
         for ii in range(self.n_im):
             im = self.xic_to_image(ii)
             # todo: for method in smoothing_methods:

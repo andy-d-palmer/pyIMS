@@ -6,7 +6,7 @@ import sys
 
 # import our MS libraries
 from pyMS.mass_spectrum import mass_spectrum
-from pyIMS.ion_datacube import ion_datacube
+from pyImagingMSpec.ion_datacube import ion_datacube
 
 class inMemoryIMS():
     def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none'):

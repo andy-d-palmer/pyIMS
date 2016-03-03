@@ -2,4 +2,4 @@
 *.py~
 *.DS_Store
 .idea
-/pyIMS.egg-info/
+/pyImagingMSpec.egg-info/

@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS     =
 SPHINX_APIDOC  = sphinx-apidoc
-APIDOC_EXCLUDE = ../pyIMS/test
+APIDOC_EXCLUDE = ../pyImagingMSpec/test
 CP_README      = ../README.md .
 SPHINXBUILD    = $(SPHINX_APIDOC) -f -o . .. $(APIDOC_EXCLUDE); cp $(CP_README) ; sphinx-build
 PAPER          =
