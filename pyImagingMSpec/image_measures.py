@@ -211,9 +211,8 @@ def isotope_image_correlation(images_flat, weights=None):
         iso_correlation = np.corrcoef(images_flat)[1:, 0]
         # when all values are the same (e.g. zeros) then correlation is undefined
         iso_correlation[np.isinf(iso_correlation) | np.isnan(iso_correlation)] = 0
-        # coerce between [0 1]
-        iso_correlation=np.clip(iso_correlation,0,1)
+
         try:
-            return np.average(iso_correlation, weights=weights)
+            return np.clip(np.average(iso_correlation, weights=weights),0,1)# coerce between [0 1]
         except TypeError:
             raise ValueError("Number of images is not equal to the number of weights + 1")
