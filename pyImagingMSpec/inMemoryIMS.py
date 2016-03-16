@@ -5,15 +5,15 @@ import sys
 #import matplotlib.pyplot as plt
 
 # import our MS libraries
-from pyMS.mass_spectrum import mass_spectrum
+from pyMSpec.mass_spectrum import mass_spectrum
 from pyImagingMSpec.ion_datacube import ion_datacube
 
 class inMemoryIMS():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none'):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none', spectrum_type='centroids'):
         file_size = os.path.getsize(filename)
-        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm)
+        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm, spectrum_type=spectrum_type)
 
-    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True,norm=[]):
+    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True,norm=[], spectrum_type='centroids'):
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.file_dir, self.filename = os.path.split(filename)
@@ -43,6 +43,7 @@ class inMemoryIMS():
         self.histogram_mz_axis = {}
         self.mz_min = 9999999999999.
         self.mz_max = 0.
+        self.spectrum_type = spectrum_type #todo this should be read for imzml files, not coded as an input
         if any([cache_spectra,do_summary]) == True:
             # load data into memory
             self.mz_list = []
@@ -54,7 +55,7 @@ class inMemoryIMS():
             for ii in self.index_list:
                 # load spectrum, keep values gt0 (shouldn't be here anyway)
                 this_spectrum = self.get_spectrum(ii)
-                mzs, counts = this_spectrum.get_spectrum(source='centroids')
+                mzs, counts = this_spectrum.get_spectrum(source=spectrum_type)
                 if len(mzs) != len(counts):
                     raise TypeError('length of mzs ({}) not equal to counts ({})'.format(len(mzs), len(counts)))
                 # Enforce data limits
@@ -62,19 +63,22 @@ class inMemoryIMS():
                 counts = counts[valid]
                 mzs = mzs[valid]
                 # record min/max
-                if mzs[0]<self.mz_min:
-                    self.mz_min = mzs[0]
-                if mzs[-1]>self.mz_max:
-                    self.mz_max = mzs[-1]
+
+                if not len(mzs) == 0:
+                    if mzs[0]<self.mz_min:
+                        self.mz_min = mzs[0]
+                    if mzs[-1]>self.mz_max:
+                        self.mz_max = mzs[-1]
+                     #record summary values
+                    if do_summary:
+                        self.tic[ii]=sum(counts)
+                        self.mic[ii]=max(counts)
                 # append ever-growing lists (should probably be preallocated or piped to disk and re-loaded)
                 if cache_spectra:
                     self.mz_list.append(mzs)
                     self.count_list.append(counts)
                     self.idx_list.append(np.ones(len(mzs), dtype=int) * ii)
-                #record summary values
-                if do_summary:
-                    self.tic[ii]=sum(counts)
-                    self.mic[ii]=max(counts)
+
             print 'loaded spectra'
             if cache_spectra:
                 self.mz_list = np.concatenate(self.mz_list)
@@ -146,7 +150,10 @@ class inMemoryIMS():
         mzs, intensities = self.imzml.getspectrum(index)
         ## temp hack -> assume centroided
         this_spectrum = mass_spectrum()
-        this_spectrum.add_centroids(mzs,intensities)
+        if self.spectrum_type == 'centroids':
+            this_spectrum.add_centroids(mzs,intensities)
+        else:
+            this_spectrum.add_spectrum(mzs,intensities)
         return this_spectrum
 
     def get_spectrum_hdf5(self, index):
