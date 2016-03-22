@@ -14,7 +14,7 @@ See the documentation on [readthedocs](http://pyimagingmspec.readthedocs.org/en/
    
 * install this branch with pip
 ```
-sudo pip install git+https://github.com/alexandrovteam/pyImagingMSpec@adp
+sudo pip install pyImagingMSpec
 ```
 # Package Contents
 
