@@ -206,10 +206,15 @@ def isotope_image_correlation(images_flat, weights=None):
     if any(len(np.shape(im)) != 1 for im in images_flat):
         raise TypeError("images are not 1d")
     else:
+        # first image mask
+        mask = images_flat[0] > 0
+        if mask.sum() < 2:
+            return 0
+        flt_images_flat = [img[mask] for img in images_flat]
         # slightly faster to compute all correlations and pull the elements needed
-        iso_correlation = np.corrcoef(images_flat)[1:, 0]
+        iso_correlation = np.corrcoef(flt_images_flat)[1:, 0]
         # when all values are the same (e.g. zeros) then correlation is undefined
-        iso_correlation[np.isinf(iso_correlation)] = 0
+        iso_correlation[np.isinf(iso_correlation) | np.isnan(iso_correlation)] = 0
         try:
             return np.average(iso_correlation, weights=weights)
         except TypeError:
