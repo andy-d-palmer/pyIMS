@@ -2,3 +2,4 @@
 *.py~
 *.DS_Store
 .idea
+/pyImagingMSpec.egg-info/

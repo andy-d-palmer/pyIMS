@@ -63,8 +63,9 @@ def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
     dilate_mask = dilate_mask or [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
     erode_mask = erode_mask or [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
     if opencv_found:
-        cv2.dilate(im, dilate_mask)
-        cv2.erode(im, erode_mask)
+        im = np.asarray(im, dtype=np.uint8)
+        im = cv2.dilate(im, np.asarray(dilate_mask, dtype=np.uint8))
+        im = cv2.erode(im, np.asarray(erode_mask, dtype=np.uint8))
         return im
     return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask, border_value=1)
 
@@ -95,7 +96,7 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
-    count_func = (lambda im: cv2.connectedComponents(im)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
+    count_func = (lambda im: cv2.connectedComponents(im, connectivity=4)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
     for lev in levels:
         # Threshold at level
         bw = (im_clean > lev)
@@ -114,14 +115,15 @@ def _default_measure(num_objs, sum_notnull):
     :return: the calculated value between 0 and 1, bigger is better
     """
     num_objs = np.asarray(num_objs, dtype=np.int_)
-    if np.unique(num_objs).shape[0] <= 1:
-        return np.nan
-
     nlevels = len(num_objs)
+    if sum_notnull <= 0:
+        raise ValueError("sum_notnull must be positive")
     if min(num_objs) < 0:
         raise ValueError("cannot have negative object counts")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
+    if np.unique(num_objs).shape[0] <= 1:
+        return np.nan
 
     sum_vals = float(np.sum(num_objs))
     return 1 - sum_vals / (sum_notnull * nlevels)
@@ -136,15 +138,14 @@ def _fit(num_objs, _):
     :param _: unused dummy parameter, kept for signature compatibility with _default_measure
     :return: the calculated value
     """
-    if np.unique(num_objs).shape[0] < 2:
-        return np.nan
-
     num_objs = np.asarray(num_objs, dtype=np.int_)
     nlevels = len(num_objs)
     if min(num_objs) < 0:
         raise ValueError("must have at least one object in each level")
     if nlevels < 1:
         raise ValueError("array of object counts is empty")
+    if np.unique(num_objs).shape[0] < 2:
+        return np.nan
 
     def func(x, a, b):
         return scipy.stats.norm.cdf(x, loc=a, scale=b)
@@ -216,6 +217,6 @@ def isotope_image_correlation(images_flat, weights=None):
         # when all values are the same (e.g. zeros) then correlation is undefined
         iso_correlation[np.isinf(iso_correlation) | np.isnan(iso_correlation)] = 0
         try:
-            return np.average(iso_correlation, weights=weights)
+            return np.clip(np.average(iso_correlation, weights=weights),0,1)# coerce between [0 1]
         except TypeError:
             raise ValueError("Number of images is not equal to the number of weights + 1")
