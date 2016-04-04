@@ -66,7 +66,7 @@ def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
         cv2.dilate(im, dilate_mask)
         cv2.erode(im, erode_mask)
         return im
-    return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
+    return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask, border_value=1)
 
 
 def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
