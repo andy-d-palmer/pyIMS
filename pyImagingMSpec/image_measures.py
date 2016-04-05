@@ -33,12 +33,9 @@ def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
     """
     statistic = statistic or _default_measure
     # don't process empty images
-    if np.sum(im) == 0:
+    if np.sum(im) <= 0:
         return np.nan
     sum_notnull = np.sum(im > 0)
-    # reject very sparse images
-    if sum_notnull < 4:
-        return np.nan
 
     if not overwrite:
         # don't modify original image, make a copy
@@ -93,7 +90,7 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     # or:
     # levels = np.linspace(0, 1, nlevels)[1:-1]
     # That is, only use nlevels - 2 levels. This means that the output array will have a size of nlevels - 2
-    levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
+    levels = np.linspace(0, 1, nlevels+1)[:-1]  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
     count_func = (lambda im: cv2.connectedComponents(im, connectivity=4)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])

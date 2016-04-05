@@ -31,11 +31,15 @@ class MeasureOfChaosTest(unittest.TestCase):
         np.testing.assert_array_equal(im_before, im_after)
 
     def test_measure_of_chaos_NaN(self):
+        a = np.zeros((10, 10))
+        a[5, 5] = 1.
+        a[8, 8] = 1.
         test_cases = (
+            (a, 10),
             (np.zeros((5, 5)), 10),
-            (np.arange(-4, 0).reshape((2, 2))),
-            (np.arange(-4, 4).reshape((2, 4))),
-            (np.arange(4).reshape((2, 2))),
+            (np.arange(-4, 0).reshape((2, 2)), 10),
+            (np.arange(-4, 4).reshape((2, 4)), 10),
+            (np.arange(4).reshape((2, 2)), 10),
         )
         for args in test_cases:
             self.assertIs(measure_of_chaos(*args), np.nan)
