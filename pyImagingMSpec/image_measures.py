@@ -33,12 +33,9 @@ def measure_of_chaos(im, nlevels, overwrite=True, statistic=None):
     """
     statistic = statistic or _default_measure
     # don't process empty images
-    if np.sum(im) == 0:
+    if np.sum(im) <= 0:
         return np.nan
     sum_notnull = np.sum(im > 0)
-    # reject very sparse images
-    if sum_notnull < 4:
-        return np.nan
 
     if not overwrite:
         # don't modify original image, make a copy
@@ -67,7 +64,7 @@ def _dilation_and_erosion(im, dilate_mask=None, erode_mask=None):
         im = cv2.dilate(im, np.asarray(dilate_mask, dtype=np.uint8))
         im = cv2.erode(im, np.asarray(erode_mask, dtype=np.uint8))
         return im
-    return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask)
+    return ndimage.binary_erosion(ndimage.morphology.binary_dilation(im, structure=dilate_mask), structure=erode_mask, border_value=1)
 
 
 def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
@@ -93,7 +90,7 @@ def _level_sets(im_clean, nlevels, prep=_dilation_and_erosion):
     # or:
     # levels = np.linspace(0, 1, nlevels)[1:-1]
     # That is, only use nlevels - 2 levels. This means that the output array will have a size of nlevels - 2
-    levels = np.linspace(0, 1, nlevels)  # np.amin(im), np.amax(im)
+    levels = np.linspace(0, 1, nlevels+1)[:-1]  # np.amin(im), np.amax(im)
     # Go through levels and calculate number of objects
     num_objs = []
     count_func = (lambda im: cv2.connectedComponents(im, connectivity=4)[0] - 1) if opencv_found else (lambda im: ndimage.label(im)[1])
@@ -207,11 +204,15 @@ def isotope_image_correlation(images_flat, weights=None):
     if any(len(np.shape(im)) != 1 for im in images_flat):
         raise TypeError("images are not 1d")
     else:
+        # first image mask
+        mask = images_flat[0] > 0
+        if mask.sum() < 2:
+            return 0
+        flt_images_flat = [img[mask] for img in images_flat]
         # slightly faster to compute all correlations and pull the elements needed
-        iso_correlation = np.corrcoef(images_flat)[1:, 0]
+        iso_correlation = np.corrcoef(flt_images_flat)[1:, 0]
         # when all values are the same (e.g. zeros) then correlation is undefined
         iso_correlation[np.isinf(iso_correlation) | np.isnan(iso_correlation)] = 0
-
         try:
             return np.clip(np.average(iso_correlation, weights=weights),0,1)# coerce between [0 1]
         except TypeError:
