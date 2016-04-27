@@ -19,7 +19,7 @@ class inMemoryIMS():
         self.file_dir, self.filename = os.path.split(filename)
         self.filename, self.file_type = os.path.splitext(self.filename)
         self.file_type = self.file_type.lower()
-        self.norm=norm
+        self.norm=norm.lower()
         if self.file_type == '.hdf5':
             import h5py
             self.hdf = h5py.File(filename, 'r')  # Readonly, fie must exist
@@ -263,8 +263,9 @@ class inMemoryIMS():
             self.generate_histogram_axis(ppm=ppm)
         return self.histogram_mz_axis[ppm]
 
-    def generate_summary_spectrum(self, summary_type='mean', ppm=1.):
-        hist_axis = self.get_histogram_axis(ppm=ppm)
+    def generate_summary_spectrum(self, summary_type='mean', ppm=1., hist_axis = []):
+        if hist_axis == []:
+            hist_axis = self.get_histogram_axis(ppm=ppm)
         # calcualte mean along some m/z axis
         mean_spec = np.zeros(np.shape(hist_axis))
         for ii in range(0, len(hist_axis) - 1):
