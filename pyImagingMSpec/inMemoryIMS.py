@@ -9,17 +9,18 @@ from pyMSpec.mass_spectrum import mass_spectrum
 from pyImagingMSpec.ion_datacube import ion_datacube
 
 class inMemoryIMS():
-    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none', spectrum_type='centroids'):
+    def __init__(self, filename, min_mz=0., max_mz=np.inf, min_int=0., index_range=[],cache_spectra=True,do_summary=True,norm='none', norm_args={}, spectrum_type='centroids'):
         file_size = os.path.getsize(filename)
-        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm, spectrum_type=spectrum_type)
+        self.load_file(filename, min_mz, max_mz, min_int, index_range=index_range,cache_spectra=cache_spectra,do_summary=do_summary,norm=norm, norm_args=norm_args, spectrum_type=spectrum_type)
 
-    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True,norm=[], spectrum_type='centroids'):
+    def load_file(self, filename, min_mz=0, max_mz=np.inf, min_int=0, index_range=[],cache_spectra=True,do_summary=True,norm=[], norm_args={}, spectrum_type='centroids'):
         # parse file to get required parameters
         # can use thin hdf5 wrapper for getting data from file
         self.file_dir, self.filename = os.path.split(filename)
         self.filename, self.file_type = os.path.splitext(self.filename)
         self.file_type = self.file_type.lower()
         self.norm=norm.lower()
+        self.norm_args = norm_args
         if self.file_type == '.hdf5':
             import h5py
             self.hdf = h5py.File(filename, 'r')  # Readonly, fie must exist
@@ -134,7 +135,7 @@ class inMemoryIMS():
         elif self.file_type == '.hdf5':
             this_spectrum = self.get_spectrum_hdf5(index)
         if self.norm != []:
-            this_spectrum.normalise_spectrum(method=self.norm)
+            this_spectrum.normalise_spectrum(method=self.norm, method_args=self.norm_args)
             #mzs,counts = this_spectrum.get_spectrum(source="centroids")
             #if self.norm == 'TIC':
             #    counts = counts / np.sum(counts)
@@ -185,8 +186,17 @@ class inMemoryIMS():
         return data_out
 
     def get_ion_image(self, mzs, tols, tol_type='ppm'):
+        try:
+            len(mzs)
+        except TypeError as e:
+            mzs = [mzs,]
+        try:
+            len(tols)
+        except TypeError as e:
+            tols = [tols, ]
+        mzs = np.asarray(mzs)
+        tols = np.asarray(tols)
         data_out = self.empty_datacube()
-
         def search_sort(mzs,tols):
             data_out = blank_dataout()
             idx_left = np.searchsorted(self.mz_list, mzs - tols, 'l')
@@ -221,11 +231,12 @@ class inMemoryIMS():
                 ion_vect = np.bincount(idx_vect, weights=count_vect, minlength=self.max_index + 1)
                 data_out.add_xic(ion_vect, [mz], [tol])
             return data_out
+        if len(tols) == 1:
+            tols = tols*np.ones(np.shape(mzs))
         if type(mzs) not in (np.ndarray, list):
             mzs = np.asarray([mzs, ])
         if tol_type == 'ppm':
             tols = tols * mzs / 1e6  # to m/z
-
         # Fast search for insertion point of mz in self.mz_list
         # First stage is looking for windows using the sublist
         idx_left = np.searchsorted(self.mz_sublist, mzs - tols, 'l')
