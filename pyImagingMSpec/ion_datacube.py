@@ -76,7 +76,7 @@ class ion_datacube():
         self.pixel_indices = pixel_indices
 
     def xic_to_image(self, xic_index):
-        xic = self.xic[xic_index]
+        xic = self.xic[xic_index].copy()
         # turn xic into an image
         img = -1 + np.zeros(self.nRows * self.nColumns)
         img[self.pixel_indices] = xic
