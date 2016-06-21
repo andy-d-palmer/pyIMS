@@ -1,16 +1,36 @@
 import h5py
 import sys
 import numpy as np
+"""
+sl files use an lz4 compression filter for which a plugin needs to be installed
+Mac:
+sudo port install hdf5-lz4-plugin
+Ubuntu:   (http://gisaxs.com/index.php/HDF5)
+sudo add-apt-repository ppa:eugenwintersberger/pni
+sudo apt-get update
+sudo apt-get install hdf5-plugin-lz4
 
+
+note that the filter isn’t actually registered until the first dataset is access so won’t be reported by h5py until after then.
+
+Remember to restart terminal running python
+
+Whilst h5py claims to look in the default directory for filters I had to add the environment variable:
+os.environ['HDF5_PLUGIN_PATH'] = "/opt/local/lib/hdf5"
+"""
 
 class slFile():
     def __init__(self, input_filename, region_name=""):
         self.region_name = region_name
         self.load_file(input_filename)
 
-    def load_file(self, input_filename):
-        # get a handle on the file
-        self.sl = h5py.File(input_filename, 'r')  # Readonly, file must exist
+    def _check_file_version(self):
+        self.file_version = self.sl['Version'][0]
+        print 'sl file version: {}'.format(self.file_version)
+        if not self.file_version in range(16, 23):
+            raise ValueError('File version {} out of range.'.format(self.file_version))
+
+    def _get_spotlist(self):
         ### get root groups from input data
         if self.region_name == "":
             self.spotlist = range(self.sl['SpectraGroups']['InitialMeasurement']['images'].shape[1])
@@ -20,28 +40,35 @@ class slFile():
             if region_name == None:
                 raise ValueError("Requested region {} not found".format(self.region_name))
             self.spotlist = self.sl['Regions'][region_name]['SpotList']
+        self.spotlist = np.asarray(self.spotlist)
+
+    def _get_spectragroup(self):
         self.initialMeasurement = self.sl['SpectraGroups']['InitialMeasurement']
-        self.file_version = self.sl['Version'][0]
-        # some hard-coding to deal with different file versions
-        if self.file_version in range(16, 23):
-            print 'sl file version: {}'.format(self.file_version)
-            self.coords = np.asarray(self.sl['Registrations']['0']['Coordinates'])
-            if np.shape(self.coords)[0] != 3:
-                self.coords = self.coords.T
-            if np.shape(self.coords)[0] != 3:
-                raise ValueError('coords second dimension should be 3 {}'.format(np.shape(self.coords)))
-        else:
-            raise ValueError('File version {} out of range.'.format(self.file_version))
         self.Mzs = np.asarray(self.initialMeasurement['SamplePositions'][
-                                  'SamplePositions'])  # we don't write this but will use it for peak detection
+                              'SamplePositions'])  # we don't write this but will use it for peak detection
         self.spectra = self.initialMeasurement['spectra']
+
+    def _get_coordinates(self):
+        ### Get Coordinates for spotlist
+        self.coords = np.asarray(self.sl['Registrations']['0']['Coordinates'])
+        if np.shape(self.coords)[0] != 3:
+            self.coords = self.coords.T
+        if np.shape(self.coords)[0] != 3:
+            raise ValueError('coords second dimension should be 3 {}'.format(np.shape(self.coords)))
+
+    def load_file(self, input_filename):
+        # get a handle on the file
+        self.sl = h5py.File(input_filename, 'r')  # Readonly, file must exist
+        self._check_file_version()
+        self._get_spotlist()
+        self._get_spectragroup()
+        self._get_coordinates()
 
     def get_spectrum(self, index):
         intensities = np.asarray(self.spectra[index, :])
         return self.Mzs, intensities
 
     def find_name(self, name):
-
         if 'name' in self.sl['Regions'][name].attrs.keys():
             if self.sl['Regions'][name].attrs['name'] == self.region_name:
                 assert isinstance(name, object)
@@ -49,7 +76,7 @@ class slFile():
 
 
 def centroid_imzml(input_filename, output_filename, step=[], apodization=False, w_size=10, min_intensity=1e-5,
-                   region_name=""):
+                   region_name="", prevent_duplicate_pixels=False):
     # write a file to imzml format (centroided)
     """
     :type min_intensity: float
@@ -70,11 +97,22 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False, 
     coords = coords.round().astype(int)
     ncol, nrow, _ = np.amax(coords, axis=0) + 1
     print 'new image size: {} x {}'.format(nrow, ncol)
-    n_total = len(sl.spotlist)
-    print 'total spectra: {}'.format(n_total)
+    if prevent_duplicate_pixels:
+        b = np.ascontiguousarray(coords).view(np.dtype((np.void, coords.dtype.itemsize * coords.shape[1])))
+        _, coord_idx = np.unique(b, return_index=True)
+        print np.shape(sl.spotlist), np.shape(coord_idx)
+
+        print "original number of spectra: {}".format(len(coords))
+    else:
+        coord_idx = range(len(coords))
+    n_total = len(coord_idx)
+    print 'spectra to write: {}'.format(n_total)
     with ImzMLWriter(output_filename, mz_dtype=mz_dtype, intensity_dtype=int_dtype) as imzml:
         done = 0
         for key in sl.spotlist:
+            if all((prevent_duplicate_pixels, key not in coord_idx)):# skip duplicate pixels
+                #print 'skip {}'.format(key)
+                continue
             mzs, intensities = sl.get_spectrum(key)
             if apodization:
                 from pyMSpec import smoothing
@@ -82,7 +120,7 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False, 
                 mzs, intensities = smoothing.apodization(mzs, intensities)
             mzs_c, intensities_c, _ = gradient(mzs, intensities, min_intensity=min_intensity)
             pos = coords[key]
-            pos = (nrow - 1 - pos[1], pos[0], pos[2])
+            pos = (pos[0], nrow - 1 - pos[1], pos[2])
             imzml.addSpectrum(mzs_c, intensities_c, pos)
             done += 1
             if done % 1000 == 0:
