@@ -19,14 +19,14 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False, 
     from pyMSpec.centroid_detection import gradient
 
     imzml_in = ImzMLParser(input_filename)
-
-    mz_dtype = imzml_in.mzPrecision
-    int_dtype = imzml_in.intensityPrecision
+    precisionDict = {'f':("32-bit float", np.float32), 'd': ("64-bit float", np.float64), 'i': ("32-bit integer", np.int32), 'l': ("64-bit integer", np.int64)}
+    mz_dtype = precisionDict[imzml_in.mzPrecision][1]
+    int_dtype = precisionDict[imzml_in.intensityPrecision][1]
     # Convert coords to index -> kinda hacky
     coords = np.asarray(imzml_in.coordinates).round(5)
     coords -= np.amin(coords, axis=0)
     if step == []:  # have a guesss
-        step = np.array([np.median(np.diff(np.unique(coords[:, i]))) for i in np.shape(coords,1)])
+        step = np.array([np.median(np.diff(np.unique(coords[:, i]))) for i in range(coords.shape[1])])
         step[np.isnan(step)] = 1
     print 'estimated pixel size: {} x {}'.format(step[0], step[1])
     coords = coords / np.reshape(step, (3,)).T
@@ -49,7 +49,7 @@ def centroid_imzml(input_filename, output_filename, step=[], apodization=False, 
             print key
             if all((prevent_duplicate_pixels, key not in coord_idx)):  # skip duplicate pixels
                 continue
-            mzs, intensities = imzml_in.get_spectrum(key)
+            mzs, intensities = imzml_in.getspectrum(key)
             if apodization:
                 from pyMSpec import smoothing
                 # todo - add to processing list in imzml
