@@ -1,13 +1,34 @@
-# README #
+# README [![Documentation Status](https://readthedocs.org/projects/pyimagingmspec/badge/?version=latest)](http://pyimagingmspec.readthedocs.org/en/latest/?badge=latest)#
 
-This repository contains the Python library for processing individual mass spectra.
+This repository contains a Python library for processing imaging mass spectrometry data.
 
-### What is this repository for? ###
+See the documentation on [readthedocs](http://pyimagingmspec.readthedocs.org/en/latest/pyImagingMSpec.html)
 
-* Developed in python and ipython notebook
-* Code classes in python and unit testing/display scripts in ipython notebooks
+# Installation
 
-### How do I get set up? ###
+* Dependancies:
+   * numpy
+   * scipy
+   * pyMS
+   * pyimzML
+   
+* install this branch with pip
+```
+sudo pip install pyImagingMSpec
+```
+# Package Contents
 
-* Clone Repository
-* add class path to ipython
+This library is currently includes
+* data container class for a imaging mass spectrum
+* tools for normalising imaging mass spectrometry data
+* data container class for ion images
+* tools for processing ion images
+* some preliminary implementations of data converation utilities
+
+### Processing a dataset ###
+* Data should be in .imzml format    
+
+
+### Who do I talk to? ###
+If you're having difficulty running the pipeline get in touch with
+http://www.embl.de/research/units/scb/alexandrov/
