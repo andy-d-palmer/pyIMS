@@ -84,6 +84,12 @@ class ion_datacube():
         return img
 
     def xic_to_image_fixed_size(self, xic_index, out_im_size):
+        """
+        returns an xic formatted as an image. This function returns an image of a pre-specfied size, cropping or padding equally around the image as required.
+        :param xic_index: index of the xic to turn into an image
+        :param out_im_size: desired image size
+        :return:
+        """
         def calc_pad(px1, px2):
             delta = px1-px2
             if delta < 0:
